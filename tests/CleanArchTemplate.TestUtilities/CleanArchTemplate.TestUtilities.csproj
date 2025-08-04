@@ -1,0 +1,26 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net9.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="AutoFixture" Version="4.18.0" />
+    <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" Version="8.0.0" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.InMemory" Version="8.0.0" />
+    <PackageReference Include="Testcontainers.PostgreSql" Version="3.6.0" />
+    <PackageReference Include="Testcontainers.Redis" Version="3.6.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\CleanArchTemplate.API\CleanArchTemplate.API.csproj" />
+    <ProjectReference Include="..\..\src\CleanArchTemplate.Application\CleanArchTemplate.Application.csproj" />
+    <ProjectReference Include="..\..\src\CleanArchTemplate.Domain\CleanArchTemplate.Domain.csproj" />
+    <ProjectReference Include="..\..\src\CleanArchTemplate.Infrastructure\CleanArchTemplate.Infrastructure.csproj" />
+    <ProjectReference Include="..\..\src\CleanArchTemplate.Shared\CleanArchTemplate.Shared.csproj" />
+  </ItemGroup>
+
+</Project>

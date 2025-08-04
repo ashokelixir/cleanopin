@@ -1,0 +1,29 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net9.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <IsPackable>false</IsPackable>
+    <IsTestProject>true</IsTestProject>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="NetArchTest.Rules" Version="1.3.2" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Using Include="Xunit" />
+    <Using Include="FluentAssertions" />
+    <Using Include="NetArchTest.Rules" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\CleanArchTemplate.API\CleanArchTemplate.API.csproj" />
+    <ProjectReference Include="..\..\src\CleanArchTemplate.Application\CleanArchTemplate.Application.csproj" />
+    <ProjectReference Include="..\..\src\CleanArchTemplate.Domain\CleanArchTemplate.Domain.csproj" />
+    <ProjectReference Include="..\..\src\CleanArchTemplate.Infrastructure\CleanArchTemplate.Infrastructure.csproj" />
+    <ProjectReference Include="..\..\src\CleanArchTemplate.Shared\CleanArchTemplate.Shared.csproj" />
+  </ItemGroup>
+
+</Project>

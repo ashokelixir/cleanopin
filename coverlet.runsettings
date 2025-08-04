@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<RunSettings>
+  <DataCollectionRunSettings>
+    <DataCollectors>
+      <DataCollector friendlyName="XPlat code coverage">
+        <Configuration>
+          <Format>opencover,cobertura,json,lcov,teamcity,sonarqube</Format>
+          <Exclude>[*.Tests]*,[*.TestUtilities]*,[*]*.Program,[*]*.Startup</Exclude>
+          <ExcludeByAttribute>Obsolete,GeneratedCodeAttribute,CompilerGeneratedAttribute</ExcludeByAttribute>
+          <ExcludeByFile>**/Migrations/**/*.cs</ExcludeByFile>
+          <IncludeDirectory>../src/</IncludeDirectory>
+          <SingleHit>false</SingleHit>
+          <UseSourceLink>true</UseSourceLink>
+          <IncludeTestAssembly>false</IncludeTestAssembly>
+          <SkipAutoProps>true</SkipAutoProps>
+          <DeterministicReport>true</DeterministicReport>
+          <ThresholdType>line,branch,method</ThresholdType>
+          <Threshold>80,70,80</Threshold>
+          <ThresholdStat>minimum</ThresholdStat>
+        </Configuration>
+      </DataCollector>
+    </DataCollectors>
+  </DataCollectionRunSettings>
+</RunSettings>
