@@ -57,7 +57,7 @@
   - Create DbContext with entity configurations and relationships
   - Implement repository pattern with generic base repository
   - Create unit of work pattern for transaction management
-  - Set up database migrations and seed data (password : WBn9uqfzyroot, port: 5432, Server Name: localhost, username: postgres)
+  - Set up database migrations and seed data
   - Configure connection pooling and query optimization
   - _Requirements: 4.1, 4.2, 4.3, 4.4, 4.5_
 
@@ -213,7 +213,7 @@
   - Create backend configuration for remote state management with S3 and DynamoDB
   - Implement Terraform workspaces for environment separation (dev, staging, prod)
   - Set up variable files and locals for environment-specific configurations
-  - aws access key - (access key : AKIAWUWEVCKALEFUF5FD, secret key: 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)
+  - aws access key 
   - _Requirements: 11.3, 11.4, 11.5_
 
 - [x] 17. Implement core AWS infrastructure with Terraform
