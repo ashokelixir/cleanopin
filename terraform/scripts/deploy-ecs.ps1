@@ -16,7 +16,7 @@
     The environment to deploy to (dev, staging, prod)
 
 .PARAMETER Region
-    AWS region to deploy to (default: us-east-1)
+    AWS region to deploy to (default: ap-south-1)
 
 .PARAMETER ContainerImage
     Docker container image to deploy
@@ -40,7 +40,7 @@ param(
     [string]$Environment,
     
     [Parameter(Mandatory = $false)]
-    [string]$Region = "us-east-1",
+    [string]$Region = "ap-south-1",
     
     [Parameter(Mandatory = $true)]
     [string]$ContainerImage,

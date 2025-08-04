@@ -116,7 +116,7 @@ Sets up the Terraform backend infrastructure with S3 and DynamoDB.
 **Example:**
 ```powershell
 # Initialize backend for all environments
-.\init-backend.ps1 -Region us-east-1 -EnableEncryption -EnableMonitoring
+.\init-backend.ps1 -Region ap-south-1 -EnableEncryption -EnableMonitoring
 ```
 
 ### 4. Environment Promotion (`promote-environment.ps1`)
