@@ -251,7 +251,7 @@ module "ecs" {
   environment_variables = [
     {
       name  = "ASPNETCORE_ENVIRONMENT"
-      value = title(var.environment)
+      value = var.environment == "dev" ? "Development" : title(var.environment)
     },
     {
       name  = "ASPNETCORE_URLS"
@@ -260,16 +260,31 @@ module "ecs" {
     {
       name  = "AWS_REGION"
       value = var.aws_region
+    },
+    {
+      name  = "SecretsManager__Region"
+      value = var.aws_region
+    },
+    {
+      name  = "SecretsManager__Environment"
+      value = var.environment
+    },
+    {
+      name  = "SecretsManager__ProjectName"
+      value = var.project_name
+    },
+    {
+      name  = "SecretsManager__UseLocalDevelopment"
+      value = "false"
     }
   ]
 
-  # Secrets from AWS Secrets Manager
+  # Secrets from AWS Secrets Manager - Inject database connection string directly
   secrets = [
     {
       name      = "ConnectionStrings__DefaultConnection"
       valueFrom = "${module.rds.secret_arn}:connectionString::"
     }
-    # JWT secret will be added when application secrets module is implemented
   ]
 
   secrets_arns = [

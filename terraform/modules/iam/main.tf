@@ -98,9 +98,12 @@ resource "aws_iam_role_policy" "ecs_task_execution_secrets" {
       {
         Effect = "Allow"
         Action = [
-          "secretsmanager:GetSecretValue"
+          "secretsmanager:GetSecretValue",
+          "secretsmanager:DescribeSecret"
         ]
-        Resource = var.secrets_manager_arns
+        Resource = [
+          for arn in var.secrets_manager_arns : "${arn}*"
+        ]
         Condition = {
           StringEquals = {
             "aws:SourceAccount" = data.aws_caller_identity.current.account_id
@@ -109,6 +112,12 @@ resource "aws_iam_role_policy" "ecs_task_execution_secrets" {
       }
     ]
   })
+}
+
+# ECS Task Execution Role - Additional Secrets Manager Policy (ReadWriteSecrets equivalent)
+resource "aws_iam_role_policy_attachment" "ecs_task_execution_secrets_readwrite" {
+  role       = aws_iam_role.ecs_task_execution.name
+  policy_arn = "arn:aws:iam::aws:policy/SecretsManagerReadWrite"
 }
 
 # ECS Task Role
@@ -160,6 +169,12 @@ resource "aws_iam_role_policy" "ecs_task_secrets" {
       }
     ]
   })
+}
+
+# ECS Task Role - Additional Secrets Manager Policy (ReadWriteSecrets equivalent)
+resource "aws_iam_role_policy_attachment" "ecs_task_secrets_readwrite" {
+  role       = aws_iam_role.ecs_task.name
+  policy_arn = "arn:aws:iam::aws:policy/SecretsManagerReadWrite"
 }
 
 # ECS Task Role - SQS Policy

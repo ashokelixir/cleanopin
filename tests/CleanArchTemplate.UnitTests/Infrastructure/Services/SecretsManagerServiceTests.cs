@@ -30,7 +30,7 @@ public class SecretsManagerServiceTests : IDisposable
         _mockLogger = new Mock<ILogger<SecretsManagerService>>();
         _settings = new SecretsManagerSettings
         {
-            Region = "us-east-1",
+            Region = "ap-south-1",
             Environment = "test",
             CacheDurationMinutes = 15,
             MaxRetryAttempts = 3,

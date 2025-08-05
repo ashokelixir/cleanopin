@@ -74,10 +74,11 @@ public static class SecurityConfiguration
             app.UseHsts();
         }
 
-        // Use HTTPS redirection (only in production)
+        // Use HTTPS redirection (only in production) - but skip health checks
         if (!env.IsDevelopment())
         {
-            app.UseHttpsRedirection();
+            app.UseWhen(context => !IsHealthCheckPath(context.Request.Path),
+                appBuilder => appBuilder.UseHttpsRedirection());
         }
 
         // Use security headers middleware
@@ -87,5 +88,12 @@ public static class SecurityConfiguration
         app.UseCors("DefaultCorsPolicy");
 
         return app;
+    }
+
+    private static bool IsHealthCheckPath(PathString path)
+    {
+        var healthPaths = new[] { "/health", "/api/health" };
+        return healthPaths.Any(healthPath =>
+            path.StartsWithSegments(healthPath, StringComparison.OrdinalIgnoreCase));
     }
 }

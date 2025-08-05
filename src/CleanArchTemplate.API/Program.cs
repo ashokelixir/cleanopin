@@ -12,12 +12,21 @@ var builder = WebApplication.CreateBuilder(args);
 
 // Add AWS Secrets Manager to configuration pipeline
 // This should be done early in the configuration process
-if (!builder.Environment.IsDevelopment())
+var useLocalDevelopment = builder.Configuration["SecretsManager:UseLocalDevelopment"]?.ToLowerInvariant() == "true";
+if (!useLocalDevelopment)
 {
+    var environment = builder.Configuration["SecretsManager:Environment"] ?? "dev";
+    var projectName = builder.Configuration["SecretsManager:ProjectName"] ?? "cleanarch-template";
+    
     builder.Configuration.AddSecretsManager(
-        new[] { "database-credentials", "jwt-settings", "external-api-keys" },
-        region: builder.Configuration["SecretsManager:Region"],
-        environment: builder.Configuration["SecretsManager:Environment"],
+        new[] { 
+            $"{projectName}-{environment}/database",
+            $"{projectName}-{environment}/jwt-settings",
+            $"{projectName}-{environment}/external-api-keys",
+            $"{projectName}-{environment}/app-config"
+        },
+        region: builder.Configuration["SecretsManager:Region"] ?? "ap-south-1",
+        environment: environment,
         optional: true);
 }
 
@@ -101,6 +110,7 @@ app.UseCorrelationId();
 // Use Serilog request logging
 app.ConfigureRequestLogging();
 
+
 // Use custom request logging middleware for detailed logging
 app.UseRequestLogging();
 
@@ -138,10 +148,6 @@ finally
     Log.CloseAndFlush();
 }
 
-record WeatherForecast(DateOnly Date, int TemperatureC, string? Summary)
-{
-    public int TemperatureF => 32 + (int)(TemperatureC / 0.5556);
-}
 
 // Make Program class accessible for testing
 public partial class Program { }

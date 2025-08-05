@@ -54,7 +54,7 @@ public static class SecretsManagerConfiguration
                     "redis-connection",
                     "datadog-api-key"
                 },
-                region: Environment.GetEnvironmentVariable("AWS_REGION") ?? "us-east-1",
+                region: Environment.GetEnvironmentVariable("AWS_REGION") ?? "ap-south-1",
                 environment: environment.EnvironmentName.ToLowerInvariant(),
                 optional: true);
 
@@ -70,7 +70,7 @@ public static class SecretsManagerConfiguration
             {
                 builder.AddSecretsManager(
                     environmentSpecificSecrets,
-                    region: Environment.GetEnvironmentVariable("AWS_REGION") ?? "us-east-1",
+                    region: Environment.GetEnvironmentVariable("AWS_REGION") ?? "ap-south-1",
                     environment: environment.EnvironmentName.ToLowerInvariant(),
                     optional: true);
             }

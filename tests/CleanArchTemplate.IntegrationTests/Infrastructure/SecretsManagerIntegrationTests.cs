@@ -154,7 +154,7 @@ public class SecretsManagerIntegrationTests : BaseIntegrationTest
         var configuration = new ConfigurationBuilder()
             .AddInMemoryCollection(new Dictionary<string, string?>
             {
-                ["SecretsManager:Region"] = "us-east-1",
+                ["SecretsManager:Region"] = "ap-south-1",
                 ["SecretsManager:Environment"] = "test",
                 ["SecretsManager:UseLocalDevelopment"] = "true"
             })

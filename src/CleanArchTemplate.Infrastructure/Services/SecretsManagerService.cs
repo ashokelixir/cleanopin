@@ -50,6 +50,22 @@ public class SecretsManagerService : ISecretsManagerService, IDisposable
                 });
     }
 
+    public async Task<string> GetRawSecretAsync(string secretName, CancellationToken cancellationToken = default)
+    {
+        _logger.LogInformation("Retrieving raw secret {SecretName} from AWS Secrets Manager", secretName);
+
+        _logger.LogInformation("Retrieving secret: {SecretName} from region: {Region}", secretName, _secretsManagerClient.Config.RegionEndpoint?.SystemName ?? "Unknown");
+
+        var request = new GetSecretValueRequest
+        {
+            SecretId = GetFullSecretName(secretName)
+        };
+
+        var response = await _secretsManagerClient.GetSecretValueAsync(request, cancellationToken).ConfigureAwait(false);
+
+        return response.SecretString;
+    }
+
     /// <inheritdoc />
     public async Task<string> GetSecretAsync(string secretName, CancellationToken cancellationToken = default)
     {
@@ -66,13 +82,13 @@ public class SecretsManagerService : ISecretsManagerService, IDisposable
         }
 
         // If in local development mode, return a placeholder
-        if (_settings.UseLocalDevelopment)
-        {
-            var localValue = $"local-{secretName}-value";
-            _logger.LogInformation("Using local development value for secret {SecretName}", secretName);
-            CacheSecret(cacheKey, localValue);
-            return localValue;
-        }
+        //if (_settings.UseLocalDevelopment)
+        //{
+        //    var localValue = $"local-{secretName}-value";
+        //    _logger.LogInformation("Using local development value for secret {SecretName}", secretName);
+        //    CacheSecret(cacheKey, localValue);
+        //    return localValue;
+        //}
 
         try
         {
@@ -105,11 +121,17 @@ public class SecretsManagerService : ISecretsManagerService, IDisposable
     }
 
     /// <inheritdoc />
-    public async Task<T?> GetSecretAsync<T>(string secretName, CancellationToken cancellationToken = default) 
-        where T : class
+    public async Task<T?> GetSecretAsync<T>(string secretName, CancellationToken cancellationToken = default)
+    where T : class
     {
         var secretValue = await GetSecretAsync(secretName, cancellationToken);
-        
+
+        // If T is string, return the raw value without JSON deserialization
+        if (typeof(T) == typeof(string))
+        {
+            return (T)(object)secretValue;
+        }
+
         try
         {
             var deserializedValue = JsonSerializer.Deserialize<T>(secretValue, new JsonSerializerOptions
@@ -117,14 +139,14 @@ public class SecretsManagerService : ISecretsManagerService, IDisposable
                 PropertyNameCaseInsensitive = true
             });
 
-            _logger.LogDebug("Successfully deserialized secret {SecretName} to type {Type}", 
+            _logger.LogDebug("Successfully deserialized secret {SecretName} to type {Type}",
                 secretName, typeof(T).Name);
 
             return deserializedValue;
         }
         catch (JsonException ex)
         {
-            _logger.LogError(ex, "Failed to deserialize secret {SecretName} to type {Type}", 
+            _logger.LogError(ex, "Failed to deserialize secret {SecretName} to type {Type}",
                 secretName, typeof(T).Name);
             throw new InvalidOperationException(
                 $"Failed to deserialize secret '{secretName}' to type '{typeof(T).Name}'", ex);

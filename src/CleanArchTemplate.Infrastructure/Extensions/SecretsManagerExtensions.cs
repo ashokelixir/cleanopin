@@ -20,7 +20,7 @@ public static class SecretsManagerExtensions
     /// </summary>
     /// <param name="builder">The configuration builder</param>
     /// <param name="secretNames">List of secret names to load</param>
-    /// <param name="region">AWS region (optional, defaults to us-east-1)</param>
+    /// <param name="region">AWS region (optional, defaults to ap-south-1)</param>
     /// <param name="environment">Environment prefix for secret names (optional)</param>
     /// <param name="keyPrefix">Prefix to add to configuration keys (optional)</param>
     /// <param name="optional">Whether the secrets are optional (optional, defaults to true)</param>
@@ -55,7 +55,7 @@ public static class SecretsManagerExtensions
     /// </summary>
     /// <param name="builder">The configuration builder</param>
     /// <param name="secretName">The secret name to load</param>
-    /// <param name="region">AWS region (optional, defaults to us-east-1)</param>
+    /// <param name="region">AWS region (optional, defaults to ap-south-1)</param>
     /// <param name="environment">Environment prefix for secret name (optional)</param>
     /// <param name="keyPrefix">Prefix to add to configuration keys (optional)</param>
     /// <param name="optional">Whether the secret is optional (optional, defaults to true)</param>

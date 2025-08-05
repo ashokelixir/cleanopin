@@ -13,12 +13,17 @@ public class SecretsManagerSettings
     /// <summary>
     /// AWS region for Secrets Manager
     /// </summary>
-    public string Region { get; set; } = "us-east-1";
+    public string Region { get; set; } = "ap-south-1";
 
     /// <summary>
     /// Environment-specific secret name prefix
     /// </summary>
     public string Environment { get; set; } = "development";
+
+    /// <summary>
+    /// Project name for secret naming convention
+    /// </summary>
+    public string ProjectName { get; set; } = "cleanarch-template";
 
     /// <summary>
     /// Cache duration for secrets in minutes

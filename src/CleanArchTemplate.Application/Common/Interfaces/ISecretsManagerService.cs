@@ -13,6 +13,8 @@ public interface ISecretsManagerService
     /// <returns>The secret value as a string</returns>
     Task<string> GetSecretAsync(string secretName, CancellationToken cancellationToken = default);
 
+    Task<string> GetRawSecretAsync(string secretName, CancellationToken cancellationToken = default);
+
     /// <summary>
     /// Retrieves a secret value and deserializes it as JSON
     /// </summary>

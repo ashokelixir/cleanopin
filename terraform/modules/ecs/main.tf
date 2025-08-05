@@ -69,12 +69,12 @@ resource "aws_ecs_task_definition" "app" {
       healthCheck = {
         command = [
           "CMD-SHELL",
-          "curl -f http://localhost:${var.container_port}${var.health_check_path} || exit 1"
+          "wget --no-verbose --tries=1 --spider http://localhost:${var.container_port}${var.health_check_path} || exit 1"
         ]
         interval    = 30
-        timeout     = 5
+        timeout     = 10
         retries     = 3
-        startPeriod = 60
+        startPeriod = 120
       }
 
       essential = true
@@ -103,6 +103,9 @@ resource "aws_ecs_service" "app" {
     container_name   = var.container_name
     container_port   = var.container_port
   }
+
+  # Health check grace period
+  health_check_grace_period_seconds = 300
 
   # Auto Scaling Configuration
   lifecycle {
