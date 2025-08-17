@@ -1,5 +1,5 @@
-using CleanArchTemplate.Application.Common.Interfaces;
 using CleanArchTemplate.Domain.Common;
+using CleanArchTemplate.Domain.Interfaces;
 using CleanArchTemplate.Infrastructure.Data.Contexts;
 using Microsoft.EntityFrameworkCore;
 

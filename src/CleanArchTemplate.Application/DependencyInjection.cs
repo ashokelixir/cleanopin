@@ -32,6 +32,9 @@ public static class DependencyInjection
         // Add FluentValidation
         services.AddValidatorsFromAssembly(assembly);
 
+        // Add application services
+        services.AddScoped<Services.IPermissionApplicationService, Services.PermissionApplicationService>();
+
         return services;
     }
 }

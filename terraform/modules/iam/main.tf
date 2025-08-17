@@ -190,11 +190,15 @@ resource "aws_iam_role_policy" "ecs_task_sqs" {
         Effect = "Allow"
         Action = [
           "sqs:SendMessage",
+          "sqs:SendMessageBatch",
           "sqs:ReceiveMessage",
           "sqs:DeleteMessage",
+          "sqs:DeleteMessageBatch",
           "sqs:GetQueueAttributes",
           "sqs:GetQueueUrl",
-          "sqs:ChangeMessageVisibility"
+          "sqs:ChangeMessageVisibility",
+          "sqs:ChangeMessageVisibilityBatch",
+          "sqs:PurgeQueue"
         ]
         Resource = var.sqs_queue_arns
         Condition = {

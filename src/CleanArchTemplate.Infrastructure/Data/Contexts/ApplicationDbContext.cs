@@ -47,6 +47,16 @@ public class ApplicationDbContext : DbContext
     /// </summary>
     public DbSet<RefreshToken> RefreshTokens { get; set; } = null!;
 
+    /// <summary>
+    /// UserPermissions DbSet
+    /// </summary>
+    public DbSet<UserPermission> UserPermissions { get; set; } = null!;
+
+    /// <summary>
+    /// PermissionAuditLogs DbSet
+    /// </summary>
+    public DbSet<PermissionAuditLog> PermissionAuditLogs { get; set; } = null!;
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
@@ -60,13 +70,7 @@ public class ApplicationDbContext : DbContext
         // Update audit fields before saving
         UpdateAuditFields();
 
-        // Get entities with domain events before saving
-        var entitiesWithEvents = GetEntitiesWithDomainEvents();
-
         var result = await base.SaveChangesAsync(cancellationToken);
-
-        // Dispatch domain events after successful save
-        await DispatchDomainEventsAsync(entitiesWithEvents, cancellationToken);
 
         return result;
     }
@@ -76,13 +80,7 @@ public class ApplicationDbContext : DbContext
         // Update audit fields before saving
         UpdateAuditFields();
 
-        // Get entities with domain events before saving
-        var entitiesWithEvents = GetEntitiesWithDomainEvents();
-
         var result = base.SaveChanges();
-
-        // Dispatch domain events after successful save (synchronously)
-        DispatchDomainEventsAsync(entitiesWithEvents).GetAwaiter().GetResult();
 
         return result;
     }
@@ -108,46 +106,7 @@ public class ApplicationDbContext : DbContext
         }
     }
 
-    private void ClearDomainEvents()
-    {
-        var entities = ChangeTracker.Entries<BaseEntity>()
-            .Where(e => e.Entity.DomainEvents.Any())
-            .Select(e => e.Entity);
 
-        foreach (var entity in entities)
-        {
-            entity.ClearDomainEvents();
-        }
-    }
-
-    private List<BaseEntity> GetEntitiesWithDomainEvents()
-    {
-        return ChangeTracker.Entries<BaseEntity>()
-            .Where(e => e.Entity.DomainEvents.Any())
-            .Select(e => e.Entity)
-            .ToList();
-    }
-
-    private async Task DispatchDomainEventsAsync(IEnumerable<BaseEntity> entities, CancellationToken cancellationToken = default)
-    {
-        // For now, we'll clear the events without dispatching
-        // In a production scenario, you might want to use a different approach
-        // such as collecting events and dispatching them via a separate service
-        // or using an outbox pattern
-        
-        foreach (var entity in entities)
-        {
-            entity.ClearDomainEvents();
-        }
-        
-        // TODO: Implement proper domain event dispatching
-        // This could be done via:
-        // 1. An outbox pattern where events are stored and processed separately
-        // 2. A domain event collector service that's called after SaveChanges
-        // 3. Using EF Core interceptors for event dispatching
-        
-        await Task.CompletedTask;
-    }
 
     private string GetCurrentUser()
     {

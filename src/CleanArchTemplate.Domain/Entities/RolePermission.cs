@@ -46,4 +46,15 @@ public class RolePermission : BaseAuditableEntity
         RoleId = roleId;
         PermissionId = permissionId;
     }
+
+    /// <summary>
+    /// Creates a new role-permission relationship
+    /// </summary>
+    /// <param name="roleId">The role ID</param>
+    /// <param name="permissionId">The permission ID</param>
+    /// <returns>A new RolePermission instance</returns>
+    public static RolePermission Create(Guid roleId, Guid permissionId)
+    {
+        return new RolePermission(roleId, permissionId);
+    }
 }

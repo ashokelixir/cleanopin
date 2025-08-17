@@ -124,7 +124,7 @@ module "secrets" {
   environment = var.environment
 
   # JWT Configuration
-  jwt_secret_key                       = var.jwt_secret_key
+  jwt_secret_key                      = var.jwt_secret_key
   jwt_issuer                          = var.jwt_issuer
   jwt_audience                        = var.jwt_audience
   jwt_access_token_expiration_minutes = var.jwt_access_token_expiration_minutes
@@ -138,12 +138,53 @@ module "secrets" {
   redis_password  = var.redis_password
 
   # Application Configuration
-  encryption_key         = var.encryption_key
-  cors_allowed_origins   = var.cors_allowed_origins
-  swagger_enabled        = var.swagger_enabled
+  encryption_key       = var.encryption_key
+  cors_allowed_origins = var.cors_allowed_origins
+  swagger_enabled      = var.swagger_enabled
 
   # Recovery window
   recovery_window_in_days = var.environment == "prod" ? 30 : 7
+
+  tags = local.common_tags
+
+  depends_on = [
+    module.vpc
+  ]
+}
+
+# SQS Messaging Module
+module "sqs" {
+  source = "./modules/sqs"
+
+  name_prefix = local.name_prefix
+  environment = var.environment
+
+  # Queue Configuration
+  message_retention_seconds      = var.sqs_message_retention_seconds
+  dlq_message_retention_seconds  = var.sqs_dlq_message_retention_seconds
+  max_receive_count              = var.sqs_max_receive_count
+  audit_events_max_receive_count = var.sqs_audit_events_max_receive_count
+
+  # Visibility Timeouts
+  user_events_visibility_timeout       = var.sqs_user_events_visibility_timeout
+  permission_events_visibility_timeout = var.sqs_permission_events_visibility_timeout
+  audit_events_visibility_timeout      = var.sqs_audit_events_visibility_timeout
+
+  # Security
+  enable_sse = var.sqs_enable_sse
+  kms_key_id = var.sqs_kms_key_id
+
+  # Monitoring
+  enable_cloudwatch_alarms     = var.sqs_enable_cloudwatch_alarms
+  queue_depth_alarm_threshold  = var.sqs_queue_depth_alarm_threshold
+  message_age_alarm_threshold  = var.sqs_message_age_alarm_threshold
+  dlq_messages_alarm_threshold = var.sqs_dlq_messages_alarm_threshold
+  alarm_actions                = var.sqs_alarm_actions
+
+  # Environment-specific settings
+  enable_high_throughput = var.environment == "prod" ? var.sqs_enable_high_throughput : false
+  deduplication_scope    = var.sqs_deduplication_scope
+  fifo_throughput_limit  = var.sqs_fifo_throughput_limit
 
   tags = local.common_tags
 
@@ -189,10 +230,8 @@ module "iam" {
     module.rds.secret_arn,
   ], module.secrets.all_secret_arns)
 
-  # SQS Queue ARNs (will be populated when SQS module is implemented)
-  sqs_queue_arns = [
-    # Add SQS queue ARNs when SQS module is implemented
-  ]
+  # SQS Queue ARNs
+  sqs_queue_arns = module.sqs.all_queue_arns
 
   # CI/CD Configuration
   cicd_account_ids    = var.cicd_account_ids
@@ -214,7 +253,8 @@ module "iam" {
   tags = local.common_tags
 
   depends_on = [
-    module.rds
+    module.rds,
+    module.sqs
   ]
 }
 
@@ -292,9 +332,7 @@ module "ecs" {
     # Add application secrets ARN when secrets module is implemented
   ]
 
-  sqs_queue_arns = [
-    # Add SQS queue ARNs when SQS module is implemented
-  ]
+  sqs_queue_arns = module.sqs.all_queue_arns
 
   tags = local.common_tags
 
@@ -303,6 +341,7 @@ module "ecs" {
     module.security_groups,
     module.alb,
     module.rds,
+    module.sqs,
     module.iam
   ]
 }

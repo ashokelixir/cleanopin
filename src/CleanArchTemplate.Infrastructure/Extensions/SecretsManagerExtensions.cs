@@ -2,6 +2,7 @@ using Amazon.SecretsManager;
 using CleanArchTemplate.Application.Common.Interfaces;
 using CleanArchTemplate.Infrastructure.Services;
 using CleanArchTemplate.Shared.Models;
+using CleanArchTemplate.Infrastructure.Configuration;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;

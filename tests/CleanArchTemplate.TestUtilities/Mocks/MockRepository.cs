@@ -1,4 +1,4 @@
-using CleanArchTemplate.Application.Common.Interfaces;
+using CleanArchTemplate.Domain.Interfaces;
 using CleanArchTemplate.Domain.Common;
 using Moq;
 using System.Linq.Expressions;

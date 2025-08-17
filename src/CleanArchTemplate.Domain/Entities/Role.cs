@@ -160,4 +160,27 @@ public class Role : BaseAuditableEntity
     {
         return _rolePermissions.Select(rp => rp.PermissionId);
     }
+
+    /// <summary>
+    /// Gets all permissions for this role (requires permissions to be loaded)
+    /// </summary>
+    /// <returns>A collection of permissions</returns>
+    public IEnumerable<Permission> GetPermissions()
+    {
+        return _rolePermissions.Select(rp => rp.Permission).Where(p => p != null);
+    }
+
+    /// <summary>
+    /// Clears all permissions from the role
+    /// </summary>
+    public void ClearPermissions()
+    {
+        var permissionIds = _rolePermissions.Select(rp => rp.PermissionId).ToList();
+        _rolePermissions.Clear();
+
+        foreach (var permissionId in permissionIds)
+        {
+            AddDomainEvent(new RolePermissionRemovedEvent(Id, permissionId, Name));
+        }
+    }
 }

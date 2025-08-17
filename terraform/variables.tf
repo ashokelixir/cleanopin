@@ -346,3 +346,114 @@ variable "swagger_enabled" {
   type        = bool
   default     = false
 }
+
+# SQS Configuration
+variable "sqs_message_retention_seconds" {
+  description = "The number of seconds Amazon SQS retains a message"
+  type        = number
+  default     = 1209600 # 14 days
+}
+
+variable "sqs_dlq_message_retention_seconds" {
+  description = "The number of seconds Amazon SQS retains a message in DLQ"
+  type        = number
+  default     = 1209600 # 14 days
+}
+
+variable "sqs_max_receive_count" {
+  description = "The number of times a message is delivered to the source queue before being moved to the dead-letter queue"
+  type        = number
+  default     = 3
+}
+
+variable "sqs_audit_events_max_receive_count" {
+  description = "The number of times a message is delivered to the audit events queue before being moved to the dead-letter queue"
+  type        = number
+  default     = 5
+}
+
+variable "sqs_user_events_visibility_timeout" {
+  description = "The visibility timeout for the user events queue"
+  type        = number
+  default     = 30
+}
+
+variable "sqs_permission_events_visibility_timeout" {
+  description = "The visibility timeout for the permission events queue"
+  type        = number
+  default     = 30
+}
+
+variable "sqs_audit_events_visibility_timeout" {
+  description = "The visibility timeout for the audit events queue"
+  type        = number
+  default     = 60
+}
+
+variable "sqs_enable_sse" {
+  description = "Enable server-side encryption for SQS queues"
+  type        = bool
+  default     = true
+}
+
+variable "sqs_kms_key_id" {
+  description = "The ID of an AWS-managed customer master key (CMK) for Amazon SQS or a custom CMK"
+  type        = string
+  default     = null
+}
+
+variable "sqs_enable_cloudwatch_alarms" {
+  description = "Enable CloudWatch alarms for SQS queues"
+  type        = bool
+  default     = true
+}
+
+variable "sqs_queue_depth_alarm_threshold" {
+  description = "The threshold for queue depth alarm"
+  type        = number
+  default     = 100
+}
+
+variable "sqs_message_age_alarm_threshold" {
+  description = "The threshold for message age alarm in seconds"
+  type        = number
+  default     = 300 # 5 minutes
+}
+
+variable "sqs_dlq_messages_alarm_threshold" {
+  description = "The threshold for dead letter queue messages alarm"
+  type        = number
+  default     = 1
+}
+
+variable "sqs_alarm_actions" {
+  description = "List of ARNs to notify when SQS alarm triggers"
+  type        = list(string)
+  default     = []
+}
+
+variable "sqs_enable_high_throughput" {
+  description = "Enable high throughput for FIFO queues (only for prod)"
+  type        = bool
+  default     = false
+}
+
+variable "sqs_deduplication_scope" {
+  description = "Specifies whether message deduplication occurs at the message group or queue level"
+  type        = string
+  default     = "queue"
+  validation {
+    condition     = contains(["queue", "messageGroup"], var.sqs_deduplication_scope)
+    error_message = "Deduplication scope must be either 'queue' or 'messageGroup'."
+  }
+}
+
+variable "sqs_fifo_throughput_limit" {
+  description = "Specifies whether the FIFO queue throughput quota applies to the entire queue or per message group"
+  type        = string
+  default     = "perQueue"
+  validation {
+    condition     = contains(["perQueue", "perMessageGroupId"], var.sqs_fifo_throughput_limit)
+    error_message = "FIFO throughput limit must be either 'perQueue' or 'perMessageGroupId'."
+  }
+}

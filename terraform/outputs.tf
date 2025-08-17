@@ -289,16 +289,62 @@ output "all_application_secret_arns" {
   sensitive   = true
 }
 
-# SQS Outputs (will be uncommented when SQS module is implemented)
-# output "sqs_queue_urls" {
-#   description = "URLs of the SQS queues"
-#   value       = module.sqs.queue_urls
-# }
+# SQS Outputs
+output "sqs_user_events_queue_arn" {
+  description = "ARN of the user events queue"
+  value       = module.sqs.user_events_queue_arn
+}
 
-# output "sqs_dlq_urls" {
-#   description = "URLs of the SQS dead letter queues"
-#   value       = module.sqs.dlq_urls
-# }
+output "sqs_user_events_queue_url" {
+  description = "URL of the user events queue"
+  value       = module.sqs.user_events_queue_url
+}
+
+output "sqs_permission_events_queue_arn" {
+  description = "ARN of the permission events queue"
+  value       = module.sqs.permission_events_queue_arn
+}
+
+output "sqs_permission_events_queue_url" {
+  description = "URL of the permission events queue"
+  value       = module.sqs.permission_events_queue_url
+}
+
+output "sqs_audit_events_queue_arn" {
+  description = "ARN of the audit events FIFO queue"
+  value       = module.sqs.audit_events_queue_arn
+}
+
+output "sqs_audit_events_queue_url" {
+  description = "URL of the audit events FIFO queue"
+  value       = module.sqs.audit_events_queue_url
+}
+
+output "sqs_all_queue_arns" {
+  description = "List of all SQS queue ARNs (including DLQs)"
+  value       = module.sqs.all_queue_arns
+}
+
+output "sqs_main_queue_arns" {
+  description = "List of main SQS queue ARNs (excluding DLQs)"
+  value       = module.sqs.main_queue_arns
+}
+
+output "sqs_dlq_arns" {
+  description = "List of dead letter queue ARNs"
+  value       = module.sqs.dlq_arns
+}
+
+output "sqs_queue_configuration" {
+  description = "Complete SQS queue configuration for application use"
+  value       = module.sqs.queue_configuration
+  sensitive   = true
+}
+
+output "sqs_cloudwatch_alarm_arns" {
+  description = "List of CloudWatch alarm ARNs for SQS queues"
+  value       = module.sqs.cloudwatch_alarm_arns
+}
 
 # Environment Information
 output "environment" {

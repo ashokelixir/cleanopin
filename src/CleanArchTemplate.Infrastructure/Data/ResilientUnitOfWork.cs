@@ -2,6 +2,7 @@ using System;
 using System.Threading;
 using System.Threading.Tasks;
 using CleanArchTemplate.Application.Common.Interfaces;
+using CleanArchTemplate.Domain.Interfaces;
 using CleanArchTemplate.Shared.Constants;
 using Microsoft.Extensions.Logging;
 

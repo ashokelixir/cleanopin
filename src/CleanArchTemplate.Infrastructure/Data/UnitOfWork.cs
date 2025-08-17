@@ -1,4 +1,5 @@
 using CleanArchTemplate.Application.Common.Interfaces;
+using CleanArchTemplate.Domain.Interfaces;
 using CleanArchTemplate.Infrastructure.Data.Contexts;
 using CleanArchTemplate.Infrastructure.Data.Repositories;
 using Microsoft.EntityFrameworkCore.Storage;
@@ -18,6 +19,7 @@ public class UnitOfWork : IUnitOfWork
     private IUserRepository? _users;
     private IRoleRepository? _roles;
     private IPermissionRepository? _permissions;
+    private IUserPermissionRepository? _userPermissions;
     private IRefreshTokenRepository? _refreshTokens;
 
     public UnitOfWork(ApplicationDbContext context)
@@ -30,6 +32,8 @@ public class UnitOfWork : IUnitOfWork
     public IRoleRepository Roles => _roles ??= new RoleRepository(_context);
 
     public IPermissionRepository Permissions => _permissions ??= new PermissionRepository(_context);
+
+    public IUserPermissionRepository UserPermissions => _userPermissions ??= new UserPermissionRepository(_context);
 
     public IRefreshTokenRepository RefreshTokens => _refreshTokens ??= new RefreshTokenRepository(_context);
 

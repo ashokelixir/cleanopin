@@ -7,16 +7,16 @@ resource "aws_secretsmanager_secret" "jwt_settings" {
   recovery_window_in_days = var.recovery_window_in_days
 
   tags = merge(var.tags, {
-    Name        = "${var.name_prefix}-jwt-settings"
-    Type        = "application-secret"
-    Component   = "authentication"
+    Name      = "${var.name_prefix}-jwt-settings"
+    Type      = "application-secret"
+    Component = "authentication"
   })
 }
 
 resource "aws_secretsmanager_secret_version" "jwt_settings" {
   secret_id = aws_secretsmanager_secret.jwt_settings.id
   secret_string = jsonencode({
-    SecretKey                     = var.jwt_secret_key
+    SecretKey                    = var.jwt_secret_key
     Issuer                       = var.jwt_issuer
     Audience                     = var.jwt_audience
     AccessTokenExpirationMinutes = var.jwt_access_token_expiration_minutes
@@ -35,20 +35,20 @@ resource "aws_secretsmanager_secret" "external_api_keys" {
   recovery_window_in_days = var.recovery_window_in_days
 
   tags = merge(var.tags, {
-    Name        = "${var.name_prefix}-external-api-keys"
-    Type        = "application-secret"
-    Component   = "external-integrations"
+    Name      = "${var.name_prefix}-external-api-keys"
+    Type      = "application-secret"
+    Component = "external-integrations"
   })
 }
 
 resource "aws_secretsmanager_secret_version" "external_api_keys" {
   secret_id = aws_secretsmanager_secret.external_api_keys.id
   secret_string = jsonencode({
-    DatadogApiKey    = var.datadog_api_key
-    SeqApiKey        = var.seq_api_key
-    AwsAccessKey     = var.aws_access_key
-    AwsSecretKey     = var.aws_secret_key
-    RedisPassword    = var.redis_password
+    DatadogApiKey = var.datadog_api_key
+    SeqApiKey     = var.seq_api_key
+    AwsAccessKey  = var.aws_access_key
+    AwsSecretKey  = var.aws_secret_key
+    RedisPassword = var.redis_password
   })
 
   lifecycle {
@@ -63,19 +63,19 @@ resource "aws_secretsmanager_secret" "app_config" {
   recovery_window_in_days = var.recovery_window_in_days
 
   tags = merge(var.tags, {
-    Name        = "${var.name_prefix}-app-config"
-    Type        = "application-secret"
-    Component   = "configuration"
+    Name      = "${var.name_prefix}-app-config"
+    Type      = "application-secret"
+    Component = "configuration"
   })
 }
 
 resource "aws_secretsmanager_secret_version" "app_config" {
   secret_id = aws_secretsmanager_secret.app_config.id
   secret_string = jsonencode({
-    EncryptionKey           = var.encryption_key
-    CorsAllowedOrigins     = var.cors_allowed_origins
-    SwaggerEnabled         = var.swagger_enabled
-    Environment            = var.environment
+    EncryptionKey      = var.encryption_key
+    CorsAllowedOrigins = var.cors_allowed_origins
+    SwaggerEnabled     = var.swagger_enabled
+    Environment        = var.environment
   })
 
   lifecycle {

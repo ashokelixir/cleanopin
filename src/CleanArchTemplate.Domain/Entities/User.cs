@@ -1,4 +1,5 @@
 using CleanArchTemplate.Domain.Common;
+using CleanArchTemplate.Domain.Enums;
 using CleanArchTemplate.Domain.Events;
 using CleanArchTemplate.Domain.ValueObjects;
 
@@ -11,6 +12,7 @@ public class User : BaseAuditableEntity
 {
     private readonly List<UserRole> _userRoles = new();
     private readonly List<RefreshToken> _refreshTokens = new();
+    private readonly List<UserPermission> _userPermissions = new();
 
     /// <summary>
     /// The user's email address
@@ -76,6 +78,11 @@ public class User : BaseAuditableEntity
     /// Navigation property for refresh tokens
     /// </summary>
     public IReadOnlyCollection<RefreshToken> RefreshTokens => _refreshTokens.AsReadOnly();
+
+    /// <summary>
+    /// Navigation property for user-specific permission overrides
+    /// </summary>
+    public IReadOnlyCollection<UserPermission> UserPermissions => _userPermissions.AsReadOnly();
 
     /// <summary>
     /// Gets the user's full name
@@ -342,6 +349,188 @@ public class User : BaseAuditableEntity
         {
             token.Revoke();
         }
+    }
+
+    /// <summary>
+    /// Adds a user-specific permission override
+    /// </summary>
+    /// <param name="userPermission">The user permission to add</param>
+    public void AddPermission(UserPermission userPermission)
+    {
+        if (userPermission == null)
+            throw new ArgumentNullException(nameof(userPermission));
+
+        if (userPermission.UserId != Id)
+            throw new ArgumentException("User permission must belong to this user.", nameof(userPermission));
+
+        // Remove existing permission for the same permission ID if it exists
+        var existing = _userPermissions.FirstOrDefault(up => up.PermissionId == userPermission.PermissionId);
+        if (existing != null)
+        {
+            _userPermissions.Remove(existing);
+        }
+
+        _userPermissions.Add(userPermission);
+    }
+
+    /// <summary>
+    /// Removes a user-specific permission override
+    /// </summary>
+    /// <param name="permissionId">The ID of the permission to remove</param>
+    public void RemovePermission(Guid permissionId)
+    {
+        var userPermission = _userPermissions.FirstOrDefault(up => up.PermissionId == permissionId);
+        if (userPermission != null)
+        {
+            _userPermissions.Remove(userPermission);
+            AddDomainEvent(new UserPermissionRemovedEvent(Id, permissionId, "Unknown", 
+                userPermission.State, userPermission.Reason));
+        }
+    }
+
+    /// <summary>
+    /// Gets a user-specific permission override for a given permission
+    /// </summary>
+    /// <param name="permissionId">The permission ID</param>
+    /// <returns>The user permission override if it exists</returns>
+    public UserPermission? GetUserPermission(Guid permissionId)
+    {
+        return _userPermissions.FirstOrDefault(up => up.PermissionId == permissionId && up.IsActive());
+    }
+
+    /// <summary>
+    /// Checks if the user has a specific permission override
+    /// </summary>
+    /// <param name="permissionId">The permission ID</param>
+    /// <returns>True if the user has an active permission override</returns>
+    public bool HasUserPermission(Guid permissionId)
+    {
+        return _userPermissions.Any(up => up.PermissionId == permissionId && up.IsActive());
+    }
+
+    /// <summary>
+    /// Gets all active user permission overrides
+    /// </summary>
+    /// <returns>Collection of active user permissions</returns>
+    public IEnumerable<UserPermission> GetActiveUserPermissions()
+    {
+        return _userPermissions.Where(up => up.IsActive());
+    }
+
+    /// <summary>
+    /// Removes expired user permission overrides
+    /// </summary>
+    public void RemoveExpiredPermissions()
+    {
+        var expiredPermissions = _userPermissions.Where(up => up.IsExpired()).ToList();
+        foreach (var expired in expiredPermissions)
+        {
+            _userPermissions.Remove(expired);
+            AddDomainEvent(new UserPermissionRemovedEvent(Id, expired.PermissionId, "Unknown", 
+                expired.State, "Expired"));
+        }
+    }
+
+    /// <summary>
+    /// Checks if the user has effective permission considering roles and user-specific overrides
+    /// </summary>
+    /// <param name="permission">The permission to check</param>
+    /// <param name="userRoles">The user's roles with their permissions</param>
+    /// <returns>True if the user has the permission</returns>
+    public bool HasEffectivePermission(Permission permission, IEnumerable<Role> userRoles)
+    {
+        if (permission == null)
+            throw new ArgumentNullException(nameof(permission));
+
+        if (!permission.IsActive)
+            return false;
+
+        // Check for user-specific override first (highest priority)
+        var userOverride = GetUserPermission(permission.Id);
+        if (userOverride != null)
+        {
+            return userOverride.State == PermissionState.Grant;
+        }
+
+        // Check role-based permissions
+        return userRoles?.Any(role => role.IsActive && role.HasPermission(permission.Id)) ?? false;
+    }
+
+    /// <summary>
+    /// Gets all effective permissions for the user considering roles and user-specific overrides
+    /// </summary>
+    /// <param name="availablePermissions">All available permissions in the system</param>
+    /// <param name="userRoles">The user's roles with their permissions</param>
+    /// <returns>Collection of effective permission names</returns>
+    public IEnumerable<string> GetEffectivePermissions(IEnumerable<Permission> availablePermissions, IEnumerable<Role> userRoles)
+    {
+        if (availablePermissions == null)
+            throw new ArgumentNullException(nameof(availablePermissions));
+
+        var permissions = availablePermissions.ToList();
+        var roles = userRoles?.ToList() ?? new List<Role>();
+        var effectivePermissions = new HashSet<string>();
+
+        // Get permissions from roles
+        foreach (var role in roles.Where(r => r.IsActive))
+        {
+            foreach (var rolePermissionId in role.GetPermissionIds())
+            {
+                var permission = permissions.FirstOrDefault(p => p.Id == rolePermissionId);
+                if (permission != null && permission.IsActive)
+                {
+                    effectivePermissions.Add(permission.Name);
+                }
+            }
+        }
+
+        // Apply user-specific permission overrides
+        foreach (var userPermission in GetActiveUserPermissions())
+        {
+            var permission = permissions.FirstOrDefault(p => p.Id == userPermission.PermissionId);
+            if (permission == null || !permission.IsActive)
+                continue;
+
+            if (userPermission.State == PermissionState.Grant)
+            {
+                effectivePermissions.Add(permission.Name);
+            }
+            else if (userPermission.State == PermissionState.Deny)
+            {
+                effectivePermissions.Remove(permission.Name);
+            }
+        }
+
+        return effectivePermissions.OrderBy(p => p);
+    }
+
+    /// <summary>
+    /// Checks if the user has any of the specified permissions
+    /// </summary>
+    /// <param name="permissionNames">The permission names to check</param>
+    /// <param name="availablePermissions">All available permissions in the system</param>
+    /// <param name="userRoles">The user's roles with their permissions</param>
+    /// <returns>True if the user has at least one of the permissions</returns>
+    public bool HasAnyPermission(IEnumerable<string> permissionNames, IEnumerable<Permission> availablePermissions, IEnumerable<Role> userRoles)
+    {
+        if (permissionNames == null)
+            throw new ArgumentNullException(nameof(permissionNames));
+
+        var permissionList = permissionNames.ToList();
+        if (!permissionList.Any())
+            return false;
+
+        var permissions = availablePermissions?.ToList() ?? new List<Permission>();
+
+        // Check each permission until we find one the user has
+        foreach (var permissionName in permissionList)
+        {
+            var permission = permissions.FirstOrDefault(p => p.Name == permissionName?.Trim());
+            if (permission != null && HasEffectivePermission(permission, userRoles))
+                return true;
+        }
+
+        return false;
     }
 
     /// <summary>

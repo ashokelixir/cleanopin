@@ -20,5 +20,14 @@ public class MappingProfile : Profile
 
         CreateMap<Permission, PermissionDto>();
         CreateMap<Permission, PermissionSummaryDto>();
+
+        CreateMap<PermissionAuditLog, PermissionAuditLogDto>()
+            .ForMember(dest => dest.UserName, opt => opt.MapFrom(src => 
+                src.User != null ? $"{src.User.FirstName} {src.User.LastName}" : null))
+            .ForMember(dest => dest.UserEmail, opt => opt.MapFrom(src => src.User != null ? src.User.Email : null))
+            .ForMember(dest => dest.RoleName, opt => opt.MapFrom(src => src.Role != null ? src.Role.Name : null))
+            .ForMember(dest => dest.PermissionName, opt => opt.MapFrom(src => src.Permission != null ? src.Permission.Name : string.Empty))
+            .ForMember(dest => dest.PermissionResource, opt => opt.MapFrom(src => src.Permission != null ? src.Permission.Resource : string.Empty))
+            .ForMember(dest => dest.PermissionAction, opt => opt.MapFrom(src => src.Permission != null ? src.Permission.Action : string.Empty));
     }
 }

@@ -27,6 +27,11 @@ namespace CleanArchTemplate.Infrastructure.Migrations
                     b.Property<Guid>("Id")
                         .HasColumnType("uuid");
 
+                    b.Property<string>("Action")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
                     b.Property<string>("Category")
                         .IsRequired()
                         .HasMaxLength(50)
@@ -54,6 +59,16 @@ namespace CleanArchTemplate.Infrastructure.Migrations
 
                     b.Property<string>("Name")
                         .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasMaxLength(201)
+                        .HasColumnType("character varying(201)")
+                        .HasComputedColumnSql("\"Resource\" || '.' || \"Action\"", true);
+
+                    b.Property<Guid?>("ParentPermissionId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Resource")
+                        .IsRequired()
                         .HasMaxLength(100)
                         .HasColumnType("character varying(100)");
 
@@ -65,6 +80,9 @@ namespace CleanArchTemplate.Infrastructure.Migrations
                         .HasColumnType("character varying(100)");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("Action")
+                        .HasDatabaseName("IX_Permissions_Action");
 
                     b.HasIndex("Category")
                         .HasDatabaseName("IX_Permissions_Category");
@@ -79,7 +97,99 @@ namespace CleanArchTemplate.Infrastructure.Migrations
                         .IsUnique()
                         .HasDatabaseName("IX_Permissions_Name");
 
+                    b.HasIndex("ParentPermissionId")
+                        .HasDatabaseName("IX_Permissions_ParentPermissionId");
+
+                    b.HasIndex("Resource")
+                        .HasDatabaseName("IX_Permissions_Resource");
+
+                    b.HasIndex("Action", "IsActive")
+                        .HasDatabaseName("IX_Permissions_Action_IsActive");
+
+                    b.HasIndex("Category", "IsActive")
+                        .HasDatabaseName("IX_Permissions_Category_IsActive");
+
+                    b.HasIndex("Resource", "Action")
+                        .IsUnique()
+                        .HasDatabaseName("IX_Permissions_Resource_Action");
+
+                    b.HasIndex("Resource", "IsActive")
+                        .HasDatabaseName("IX_Permissions_Resource_IsActive");
+
                     b.ToTable("Permissions", (string)null);
+                });
+
+            modelBuilder.Entity("CleanArchTemplate.Domain.Entities.PermissionAuditLog", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Action")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<string>("NewValue")
+                        .HasMaxLength(4000)
+                        .HasColumnType("character varying(4000)");
+
+                    b.Property<string>("OldValue")
+                        .HasMaxLength(4000)
+                        .HasColumnType("character varying(4000)");
+
+                    b.Property<DateTime>("PerformedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp with time zone")
+                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
+
+                    b.Property<string>("PerformedBy")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)");
+
+                    b.Property<Guid>("PermissionId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Reason")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<Guid?>("RoleId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Action")
+                        .HasDatabaseName("IX_PermissionAuditLogs_Action");
+
+                    b.HasIndex("PerformedAt")
+                        .HasDatabaseName("IX_PermissionAuditLogs_PerformedAt");
+
+                    b.HasIndex("PerformedBy")
+                        .HasDatabaseName("IX_PermissionAuditLogs_PerformedBy");
+
+                    b.HasIndex("PermissionId")
+                        .HasDatabaseName("IX_PermissionAuditLogs_PermissionId");
+
+                    b.HasIndex("RoleId")
+                        .HasDatabaseName("IX_PermissionAuditLogs_RoleId");
+
+                    b.HasIndex("UserId")
+                        .HasDatabaseName("IX_PermissionAuditLogs_UserId");
+
+                    b.HasIndex("Action", "PerformedAt")
+                        .HasDatabaseName("IX_PermissionAuditLogs_Action_PerformedAt");
+
+                    b.HasIndex("PermissionId", "PerformedAt")
+                        .HasDatabaseName("IX_PermissionAuditLogs_PermissionId_PerformedAt");
+
+                    b.HasIndex("UserId", "PerformedAt")
+                        .HasDatabaseName("IX_PermissionAuditLogs_UserId_PerformedAt");
+
+                    b.ToTable("PermissionAuditLogs", (string)null);
                 });
 
             modelBuilder.Entity("CleanArchTemplate.Domain.Entities.RefreshToken", b =>
@@ -332,6 +442,71 @@ namespace CleanArchTemplate.Infrastructure.Migrations
                     b.ToTable("Users", (string)null);
                 });
 
+            modelBuilder.Entity("CleanArchTemplate.Domain.Entities.UserPermission", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp with time zone")
+                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
+
+                    b.Property<string>("CreatedBy")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<DateTime?>("ExpiresAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("PermissionId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Reason")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<int>("State")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("UpdatedBy")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CreatedAt")
+                        .HasDatabaseName("IX_UserPermissions_CreatedAt");
+
+                    b.HasIndex("ExpiresAt")
+                        .HasDatabaseName("IX_UserPermissions_ExpiresAt");
+
+                    b.HasIndex("PermissionId")
+                        .HasDatabaseName("IX_UserPermissions_PermissionId");
+
+                    b.HasIndex("State")
+                        .HasDatabaseName("IX_UserPermissions_State");
+
+                    b.HasIndex("UserId")
+                        .HasDatabaseName("IX_UserPermissions_UserId");
+
+                    b.HasIndex("UserId", "PermissionId")
+                        .IsUnique()
+                        .HasDatabaseName("IX_UserPermissions_UserId_PermissionId");
+
+                    b.HasIndex("UserId", "State", "ExpiresAt")
+                        .HasDatabaseName("IX_UserPermissions_UserId_State_ExpiresAt");
+
+                    b.ToTable("UserPermissions", (string)null);
+                });
+
             modelBuilder.Entity("CleanArchTemplate.Domain.Entities.UserRole", b =>
                 {
                     b.Property<Guid>("Id")
@@ -376,6 +551,41 @@ namespace CleanArchTemplate.Infrastructure.Migrations
                         .HasDatabaseName("IX_UserRoles_UserId_RoleId");
 
                     b.ToTable("UserRoles", (string)null);
+                });
+
+            modelBuilder.Entity("CleanArchTemplate.Domain.Entities.Permission", b =>
+                {
+                    b.HasOne("CleanArchTemplate.Domain.Entities.Permission", "ParentPermission")
+                        .WithMany("ChildPermissions")
+                        .HasForeignKey("ParentPermissionId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.Navigation("ParentPermission");
+                });
+
+            modelBuilder.Entity("CleanArchTemplate.Domain.Entities.PermissionAuditLog", b =>
+                {
+                    b.HasOne("CleanArchTemplate.Domain.Entities.Permission", "Permission")
+                        .WithMany()
+                        .HasForeignKey("PermissionId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("CleanArchTemplate.Domain.Entities.Role", "Role")
+                        .WithMany()
+                        .HasForeignKey("RoleId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("CleanArchTemplate.Domain.Entities.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.Navigation("Permission");
+
+                    b.Navigation("Role");
+
+                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("CleanArchTemplate.Domain.Entities.RefreshToken", b =>
@@ -437,6 +647,25 @@ namespace CleanArchTemplate.Infrastructure.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("CleanArchTemplate.Domain.Entities.UserPermission", b =>
+                {
+                    b.HasOne("CleanArchTemplate.Domain.Entities.Permission", "Permission")
+                        .WithMany("UserPermissions")
+                        .HasForeignKey("PermissionId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("CleanArchTemplate.Domain.Entities.User", "User")
+                        .WithMany("UserPermissions")
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Permission");
+
+                    b.Navigation("User");
+                });
+
             modelBuilder.Entity("CleanArchTemplate.Domain.Entities.UserRole", b =>
                 {
                     b.HasOne("CleanArchTemplate.Domain.Entities.Role", "Role")
@@ -458,7 +687,11 @@ namespace CleanArchTemplate.Infrastructure.Migrations
 
             modelBuilder.Entity("CleanArchTemplate.Domain.Entities.Permission", b =>
                 {
+                    b.Navigation("ChildPermissions");
+
                     b.Navigation("RolePermissions");
+
+                    b.Navigation("UserPermissions");
                 });
 
             modelBuilder.Entity("CleanArchTemplate.Domain.Entities.Role", b =>
@@ -471,6 +704,8 @@ namespace CleanArchTemplate.Infrastructure.Migrations
             modelBuilder.Entity("CleanArchTemplate.Domain.Entities.User", b =>
                 {
                     b.Navigation("RefreshTokens");
+
+                    b.Navigation("UserPermissions");
 
                     b.Navigation("UserRoles");
                 });

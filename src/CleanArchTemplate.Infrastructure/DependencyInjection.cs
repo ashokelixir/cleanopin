@@ -1,16 +1,21 @@
+using Amazon.SQS;
 using CleanArchTemplate.Application.Common.Interfaces;
+using CleanArchTemplate.Infrastructure.Caching;
 using CleanArchTemplate.Infrastructure.Data;
 using CleanArchTemplate.Infrastructure.Data.Contexts;
 using CleanArchTemplate.Infrastructure.Data.Interceptors;
 using CleanArchTemplate.Infrastructure.Data.Repositories;
 using CleanArchTemplate.Infrastructure.Data.Seed;
 using CleanArchTemplate.Infrastructure.Extensions;
+using CleanArchTemplate.Infrastructure.Messaging;
+using CleanArchTemplate.Infrastructure.Messaging.Handlers;
 using CleanArchTemplate.Infrastructure.Services;
 using CleanArchTemplate.Shared.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Polly;
 
 namespace CleanArchTemplate.Infrastructure;
 
@@ -29,12 +34,16 @@ public static class DependencyInjection
     {
         // Add performance logging interceptor as singleton
         services.AddSingleton<PerformanceLoggingInterceptor>();
+        
+        // Add domain event dispatching interceptor as singleton
+        services.AddSingleton<DomainEventDispatchingInterceptor>();
 
         // Add database context with connection pooling
         services.AddDbContextPool<ApplicationDbContext>((serviceProvider, options) =>
         {
             var connectionString = configuration.GetConnectionString("DefaultConnection");
             var performanceInterceptor = serviceProvider.GetRequiredService<PerformanceLoggingInterceptor>();
+            var domainEventInterceptor = serviceProvider.GetRequiredService<DomainEventDispatchingInterceptor>();
             
             options.UseNpgsql(connectionString, npgsqlOptions =>
             {
@@ -46,19 +55,28 @@ public static class DependencyInjection
                 npgsqlOptions.CommandTimeout(30);
             });
 
-            // Add performance logging interceptor
-            options.AddInterceptors(performanceInterceptor);
+            // Add interceptors
+            options.AddInterceptors(performanceInterceptor, domainEventInterceptor);
 
             // Configure EF Core options
             options.EnableServiceProviderCaching();
             options.EnableSensitiveDataLogging(false);
         }, poolSize: 100);
 
-        // Add repositories
-        services.AddScoped<IUserRepository, UserRepository>();
-        services.AddScoped<IRoleRepository, RoleRepository>();
-        services.AddScoped<IPermissionRepository, PermissionRepository>();
-        services.AddScoped<IRefreshTokenRepository, RefreshTokenRepository>();
+        // Add telemetry service
+        services.AddSingleton<ITelemetryService, TelemetryService>();
+
+        // Add repositories (telemetry will be handled by EF Core instrumentation)
+        services.AddScoped<Domain.Interfaces.IUserRepository, UserRepository>();
+        services.AddScoped<Domain.Interfaces.IRoleRepository, RoleRepository>();
+        services.AddScoped<Domain.Interfaces.IPermissionRepository, PermissionRepository>();
+        services.AddScoped<Domain.Interfaces.IUserPermissionRepository, UserPermissionRepository>();
+        services.AddScoped<Domain.Interfaces.IRolePermissionRepository, RolePermissionRepository>();
+        services.AddScoped<Domain.Interfaces.IPermissionAuditLogRepository, PermissionAuditLogRepository>();
+        services.AddScoped<Domain.Interfaces.IRefreshTokenRepository, RefreshTokenRepository>();
+
+        // Add domain services
+        services.AddScoped<Domain.Services.IPermissionEvaluationService, Domain.Services.PermissionEvaluationService>();
 
         // Add Unit of Work
         services.AddScoped<IUnitOfWork, UnitOfWork>();
@@ -71,7 +89,31 @@ public static class DependencyInjection
         services.AddScoped<IPasswordService, PasswordService>();
         services.AddScoped<IJwtTokenService, JwtTokenService>();
         services.AddScoped<IDomainEventDispatcher, DomainEventDispatcher>();
+        services.AddScoped<IPermissionAuditService, PermissionAuditService>();
+        services.AddScoped<ICurrentUserService, CurrentUserService>();
         services.AddScoped<IAuditLogService, AuditLogService>();
+        services.AddScoped<IPermissionAuthorizationService, PermissionAuthorizationService>();
+        services.AddScoped<IPermissionMatrixService, PermissionMatrixService>();
+        services.AddScoped<IPermissionSeedingService, PermissionSeedingService>();
+        services.AddScoped<Application.Common.Services.IErrorLoggingService, ErrorLoggingService>();
+        
+        // Add caching services
+        services.AddMemoryCache();
+        services.AddStackExchangeRedisCache(options =>
+        {
+            options.Configuration = configuration.GetConnectionString("Redis");
+        });
+        
+        // Add cache service with telemetry decorator
+        services.AddScoped<MemoryCacheService>();
+        services.AddScoped<ICacheService>(provider =>
+            new Decorators.TelemetryCacheServiceDecorator(
+                provider.GetRequiredService<MemoryCacheService>(),
+                provider.GetRequiredService<ITelemetryService>()));
+        
+        services.Configure<PermissionCacheOptions>(
+            configuration.GetSection(PermissionCacheOptions.SectionName));
+        services.AddScoped<IPermissionCacheService, PermissionCacheService>();
         
         // Add resilience services
         services.Configure<ResilienceSettings>(configuration.GetSection(ResilienceSettings.SectionName));
@@ -92,6 +134,9 @@ public static class DependencyInjection
         
         // Add database credentials rotation service
         services.AddDatabaseCredentialsRotation();
+
+        // Add messaging services
+        services.AddMessaging(configuration);
 
         return services;
     }
@@ -136,5 +181,90 @@ public static class DependencyInjection
             logger.LogError(ex, "An error occurred while setting up the database.");
             throw;
         }
+    }
+
+    /// <summary>
+    /// Adds messaging services to the service collection
+    /// </summary>
+    /// <param name="services">The service collection</param>
+    /// <param name="configuration">The configuration</param>
+    /// <returns>The service collection</returns>
+    public static IServiceCollection AddMessaging(this IServiceCollection services, IConfiguration configuration)
+    {
+        // Configure messaging options
+        services.Configure<MessagingOptions>(configuration.GetSection(MessagingOptions.SectionName));
+        
+        // Get messaging options to check if messaging is enabled
+        var messagingOptions = configuration.GetSection(MessagingOptions.SectionName).Get<MessagingOptions>();
+        
+        // Only register messaging services if enabled
+        if (messagingOptions?.Enabled != true)
+        {
+            // Register no-op implementations when messaging is disabled
+            services.AddScoped<IMessagePublisher, NoOpMessagePublisher>();
+            return services;
+        }
+
+        // Add AWS SQS client
+        services.AddSingleton<IAmazonSQS>(serviceProvider =>
+        {
+            var messagingOptions = configuration.GetSection(MessagingOptions.SectionName).Get<MessagingOptions>() ?? new MessagingOptions();
+            
+            var config = new AmazonSQSConfig
+            {
+                RegionEndpoint = Amazon.RegionEndpoint.GetBySystemName(messagingOptions.AwsRegion)
+            };
+
+            // Use LocalStack endpoint for development if configured
+            if (!string.IsNullOrEmpty(messagingOptions.LocalStackEndpoint))
+            {
+                config.ServiceURL = messagingOptions.LocalStackEndpoint;
+                config.UseHttp = true;
+            }
+
+            // Create SQS client with credentials if provided
+            if (!string.IsNullOrEmpty(messagingOptions.AwsAccessKey) && !string.IsNullOrEmpty(messagingOptions.AwsSecretKey))
+            {
+                return new AmazonSQSClient(messagingOptions.AwsAccessKey, messagingOptions.AwsSecretKey, config);
+            }
+
+            // Use default credential chain (IAM roles, environment variables, etc.)
+            return new AmazonSQSClient(config);
+        });
+
+        // Add resilience pipeline for messaging
+        services.AddSingleton<ResiliencePipeline>(serviceProvider =>
+        {
+            var messagingOptions = configuration.GetSection(MessagingOptions.SectionName).Get<MessagingOptions>() ?? new MessagingOptions();
+            
+            return new ResiliencePipelineBuilder()
+                .AddRetry(new Polly.Retry.RetryStrategyOptions
+                {
+                    MaxRetryAttempts = messagingOptions.RetryPolicy.MaxRetryAttempts,
+                    Delay = TimeSpan.FromMilliseconds(messagingOptions.RetryPolicy.InitialDelayMs),
+                    MaxDelay = TimeSpan.FromMilliseconds(messagingOptions.RetryPolicy.MaxDelayMs),
+                    BackoffType = DelayBackoffType.Exponential
+                })
+                .AddTimeout(TimeSpan.FromSeconds(30))
+                .Build();
+        });
+
+        // Add messaging services with telemetry decorators
+        services.AddScoped<SqsMessagePublisher>();
+        services.AddScoped<IMessagePublisher>(provider =>
+            new Decorators.TelemetryMessagePublisherDecorator(
+                provider.GetRequiredService<SqsMessagePublisher>(),
+                provider.GetRequiredService<ITelemetryService>()));
+        services.AddScoped<IMessageConsumer, SqsMessageConsumer>();
+        services.AddScoped<SqsQueueManager>();
+
+        // Add message handlers
+        services.AddScoped<UserMessageHandler>();
+        services.AddScoped<PermissionMessageHandler>();
+
+        // Add background service for message consumers
+        services.AddHostedService<MessageConsumerService>();
+
+        return services;
     }
 }

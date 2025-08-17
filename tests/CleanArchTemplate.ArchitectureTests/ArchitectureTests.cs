@@ -8,7 +8,7 @@ namespace CleanArchTemplate.ArchitectureTests;
 public class ArchitectureTests
 {
     private static readonly Assembly DomainAssembly = typeof(CleanArchTemplate.Domain.Common.BaseEntity).Assembly;
-    private static readonly Assembly ApplicationAssembly = typeof(CleanArchTemplate.Application.Common.Interfaces.IRepository<>).Assembly;
+    private static readonly Assembly ApplicationAssembly = typeof(CleanArchTemplate.Application.DependencyInjection).Assembly;
     private static readonly Assembly InfrastructureAssembly = typeof(CleanArchTemplate.Infrastructure.DependencyInjection).Assembly;
     private static readonly Assembly ApiAssembly = typeof(CleanArchTemplate.API.Controllers.AuthController).Assembly;
 

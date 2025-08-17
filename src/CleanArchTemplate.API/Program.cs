@@ -2,8 +2,11 @@ using CleanArchTemplate.Application;
 using CleanArchTemplate.Infrastructure;
 using CleanArchTemplate.Infrastructure.Extensions;
 using CleanArchTemplate.API.Configuration;
+using CleanArchTemplate.API.Extensions;
 using CleanArchTemplate.API.Middleware;
+using CleanArchTemplate.API.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Mvc.Infrastructure;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
 using Serilog;
@@ -46,8 +49,17 @@ builder.Services.AddRateLimiting(builder.Configuration);
 // Add API versioning
 builder.Services.AddCustomApiVersioning();
 
-// Add controllers
-builder.Services.AddControllers();
+// Add HTTP context accessor
+builder.Services.AddHttpContextAccessor();
+
+// Add validation services
+builder.Services.AddValidationServices();
+
+// Add controllers with global model validation
+builder.Services.AddControllers(options =>
+{
+    options.AddGlobalModelValidation();
+});
 
 // Configure JWT Authentication
 var jwtSettings = builder.Configuration.GetSection("Jwt");
@@ -75,7 +87,19 @@ builder.Services.AddAuthentication(options =>
     };
 });
 
-builder.Services.AddAuthorization();
+// Add permission-based authorization
+builder.Services.AddPermissionBasedAuthorization();
+builder.Services.AddPermissionPolicies();
+
+// Add custom problem details factory
+builder.Services.AddSingleton<ProblemDetailsFactory, CustomProblemDetailsFactory>();
+
+// Add OpenTelemetry and Datadog
+builder.Services.AddOpenTelemetryServices(builder.Configuration);
+builder.Services.AddDatadogTracing(builder.Configuration);
+
+// Add comprehensive health checks
+builder.Services.AddComprehensiveHealthChecks(builder.Configuration);
 
 // Add Swagger documentation
 builder.Services.AddSwaggerDocumentation(builder.Configuration);
@@ -104,6 +128,9 @@ using (var scope = app.Services.CreateScope())
 // Configure the HTTP request pipeline.
 app.UseSwaggerDocumentation(app.Environment, builder.Configuration);
 
+// Use global exception handling (must be early in pipeline)
+app.UseGlobalExceptionHandling();
+
 // Use correlation ID middleware (must be early in pipeline)
 app.UseCorrelationId();
 
@@ -120,6 +147,9 @@ app.UseSecurityMiddleware(app.Environment);
 // Use input validation middleware
 app.UseInputValidation();
 
+// Use telemetry middleware
+app.UseMiddleware<TelemetryMiddleware>();
+
 // Use rate limiting
 app.UseRateLimitingMiddleware();
 
@@ -131,6 +161,9 @@ app.UseAuthorization();
 
 // Use API versioning
 app.UseApiVersioning();
+
+// Configure health check endpoints
+app.UseHealthCheckEndpoints();
 
 app.MapControllers();
 

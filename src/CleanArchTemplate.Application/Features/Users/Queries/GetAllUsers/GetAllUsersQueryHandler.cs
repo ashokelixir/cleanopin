@@ -3,7 +3,6 @@ using CleanArchTemplate.Application.Common.Interfaces;
 using CleanArchTemplate.Application.Common.Models;
 using CleanArchTemplate.Shared.Models;
 using MediatR;
-using Microsoft.EntityFrameworkCore;
 
 namespace CleanArchTemplate.Application.Features.Users.Queries.GetAllUsers;
 
@@ -20,14 +19,15 @@ public class GetAllUsersQueryHandler : IRequestHandler<GetAllUsersQuery, Paginat
 
     public async Task<PaginatedResult<UserSummaryDto>> Handle(GetAllUsersQuery request, CancellationToken cancellationToken)
     {
-        var query = _unitOfWork.Users.Query();
+        var allUsers = await _unitOfWork.Users.GetAllAsync(cancellationToken);
+        var usersList = allUsers.ToList();
         
-        var totalCount = await query.CountAsync(cancellationToken);
+        var totalCount = usersList.Count;
         
-        var users = await query
+        var users = usersList
             .Skip((request.Pagination.PageNumber - 1) * request.Pagination.PageSize)
             .Take(request.Pagination.PageSize)
-            .ToListAsync(cancellationToken);
+            .ToList();
 
         var userDtos = _mapper.Map<List<UserSummaryDto>>(users);
 

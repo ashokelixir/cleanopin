@@ -51,7 +51,7 @@ This document provides comprehensive instructions for running the CleanArchTempl
 | API | 8080 | Main application |
 | PostgreSQL | 5432 | Primary database |
 | Redis | 6379 | Caching layer |
-| LocalStack | 4566 | AWS services emulation |
+| LocalStack | 4566 | AWS services emulation (SQS, Secrets Manager, S3) |
 | Seq | 5341 | Centralized logging |
 
 ## Environment Variables
@@ -76,6 +76,10 @@ AWS__ServiceURL: "http://localstack:4566"
 AWS__AccessKey: "test"
 AWS__SecretKey: "test"
 AWS__Region: "us-east-1"
+
+# Messaging (SQS)
+Messaging__AwsRegion: "us-east-1"
+Messaging__LocalStackEndpoint: "http://localstack:4566"
 
 # Logging
 Serilog__MinimumLevel__Default: "Information"
@@ -241,6 +245,36 @@ services:
 - **Application Health:** `http://localhost:8080/health`
 - **Database Health:** `http://localhost:8080/health/database`
 - **Redis Health:** `http://localhost:8080/health/redis`
+- **SQS Health:** `http://localhost:8080/health/sqs`
+
+### Event-Driven Architecture Testing
+
+Test the complete event-driven messaging system:
+
+```powershell
+# Run messaging test script
+.\scripts\test-messaging.ps1
+
+# Check SQS queue status
+curl http://localhost:4566/_localstack/health
+
+# View queue messages in LocalStack
+awslocal sqs list-queues --endpoint-url http://localhost:4566
+```
+
+### SQS Queues
+
+The application uses the following SQS queues for event-driven architecture:
+
+- **user-events** - User lifecycle events (create, update, activate, etc.)
+- **permission-events** - Permission lifecycle events
+- **user-permission-events** - User-permission relationship events
+- **role-events** - Role lifecycle events
+- **role-permission-events** - Role-permission relationship events
+- **user-role-events** - User-role relationship events
+- **audit-events.fifo** - Audit trail events (FIFO for ordering)
+
+Each queue has a corresponding dead letter queue (DLQ) for failed message handling.
 
 ### Metrics Collection
 

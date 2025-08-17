@@ -48,6 +48,43 @@ The core AWS infrastructure has been implemented with the following components:
 - **S3 Gateway Endpoint**: Cost-effective S3 access without internet routing
 - **ECR Interface Endpoints**: Container image pulls (dkr and api)
 - **Secrets Manager Endpoint**: Secure configuration retrieval
+
+### SQS Messaging Infrastructure (✅ Completed)
+
+The SQS messaging infrastructure provides asynchronous message processing capabilities:
+
+#### Queue Types
+- **Standard Queues**:
+  - `user-events`: User lifecycle events (created, updated, deleted)
+  - `permission-events`: Permission change events (assigned, removed, bulk operations)
+- **FIFO Queues**:
+  - `audit-events.fifo`: Audit events requiring ordered processing
+
+#### Features
+- **Dead Letter Queues**: Automatic failure handling for all main queues
+- **Server-Side Encryption**: AWS managed keys with optional customer managed KMS keys
+- **CloudWatch Monitoring**: Queue depth, message age, and DLQ alarms
+- **IAM Security**: Least-privilege access for ECS tasks
+- **Long Polling**: Cost-optimized message retrieval
+- **Environment Isolation**: Separate queues per environment
+
+#### Queue Configuration
+| Queue Type | Visibility Timeout | Max Receive Count | Retention Period |
+|------------|-------------------|-------------------|------------------|
+| user-events | 30 seconds | 3 | 14 days |
+| permission-events | 30 seconds | 3 | 14 days |
+| audit-events (FIFO) | 60 seconds | 5 | 14 days |
+
+#### Deployment
+```powershell
+# Deploy SQS infrastructure
+./scripts/deploy-sqs.ps1 -Environment dev -Region ap-south-1
+
+# Test SQS infrastructure
+./tests/sqs.test.ps1 -Environment dev -Region ap-south-1
+```
+
+For detailed SQS implementation information, see [SQS_IMPLEMENTATION.md](SQS_IMPLEMENTATION.md).
 - **CloudWatch Logs Endpoint**: Log shipping without internet
 - **CloudWatch Monitoring Endpoint**: Metrics collection
 

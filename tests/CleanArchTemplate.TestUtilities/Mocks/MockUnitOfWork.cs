@@ -1,4 +1,5 @@
 using CleanArchTemplate.Application.Common.Interfaces;
+using CleanArchTemplate.Domain.Interfaces;
 using Moq;
 
 namespace CleanArchTemplate.TestUtilities.Mocks;

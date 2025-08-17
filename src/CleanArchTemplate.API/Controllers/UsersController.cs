@@ -1,9 +1,15 @@
 using CleanArchTemplate.Application.Features.Users.Commands.CreateUser;
 using CleanArchTemplate.Application.Features.Users.Commands.UpdateUser;
+using CleanArchTemplate.Application.Features.Users.Commands.DeleteUser;
+using CleanArchTemplate.Application.Features.Users.Commands.AssignRole;
+using CleanArchTemplate.Application.Features.Users.Commands.RemoveRole;
+using CleanArchTemplate.Application.Features.Users.Commands.VerifyEmail;
+using CleanArchTemplate.Application.Features.Users.Commands.InvalidateUserSessions;
 using CleanArchTemplate.Application.Features.Users.Queries.GetAllUsers;
 using CleanArchTemplate.Application.Features.Users.Queries.GetUserById;
 using CleanArchTemplate.Application.Common.Models;
 using CleanArchTemplate.Shared.Models;
+using CleanArchTemplate.API.Attributes;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -37,6 +43,7 @@ public class UsersController : ControllerBase
     /// <param name="cancellationToken">Cancellation token</param>
     /// <returns>Created user details</returns>
     [HttpPost]
+    [RequirePermission("Users.Create")]
     [SwaggerOperation(
         Summary = "Create a new user with resilience patterns",
         Description = "Creates a new user using resilience patterns including retry logic, circuit breaker, and timeout protection. Demonstrates enterprise-grade fault tolerance.",
@@ -80,6 +87,7 @@ public class UsersController : ControllerBase
     /// <param name="cancellationToken">Cancellation token</param>
     /// <returns>Paginated list of users</returns>
     [HttpGet]
+    [RequirePermission("Users.Read")]
     [ProducesResponseType(typeof(PaginatedResult<UserSummaryDto>), StatusCodes.Status200OK)]
     public async Task<IActionResult> GetAllUsers([FromQuery] PaginationRequest request, CancellationToken cancellationToken)
     {
@@ -98,6 +106,7 @@ public class UsersController : ControllerBase
     /// <param name="cancellationToken">Cancellation token</param>
     /// <returns>User details</returns>
     [HttpGet("{id:guid}")]
+    [RequirePermission("Users.Read")]
     [ProducesResponseType(typeof(UserDto), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> GetUserById(Guid id, CancellationToken cancellationToken)
@@ -128,6 +137,7 @@ public class UsersController : ControllerBase
     /// <param name="cancellationToken">Cancellation token</param>
     /// <returns>Updated user details</returns>
     [HttpPut("{id:guid}")]
+    [RequirePermission("Users.Update")]
     [ProducesResponseType(typeof(UserDto), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
@@ -154,6 +164,165 @@ public class UsersController : ControllerBase
         {
             404 => NotFound(new { error = result.Message }),
             422 => UnprocessableEntity(new { error = result.Message, details = result.Errors }),
+            _ => BadRequest(new { error = result.Message })
+        };
+    }
+
+    /// <summary>
+    /// Deletes a user (deactivates)
+    /// </summary>
+    /// <param name="id">User ID</param>
+    /// <param name="cancellationToken">Cancellation token</param>
+    /// <returns>Success result</returns>
+    [HttpDelete("{id:guid}")]
+    [RequirePermission("Users.Delete")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> DeleteUser(Guid id, CancellationToken cancellationToken)
+    {
+        _logger.LogInformation("Deleting user: {UserId}", id);
+
+        var command = new DeleteUserCommand(id);
+        var result = await _mediator.Send(command, cancellationToken);
+
+        if (result.IsSuccess)
+        {
+            _logger.LogInformation("User deleted successfully: {UserId}", id);
+            return NoContent();
+        }
+
+        _logger.LogWarning("User deletion failed for ID: {UserId}. Error: {Error}", id, result.Message);
+        return result.StatusCode switch
+        {
+            404 => NotFound(new { error = result.Message }),
+            _ => BadRequest(new { error = result.Message })
+        };
+    }
+
+    /// <summary>
+    /// Assigns a role to a user
+    /// </summary>
+    /// <param name="id">User ID</param>
+    /// <param name="command">Role assignment details</param>
+    /// <param name="cancellationToken">Cancellation token</param>
+    /// <returns>Success result</returns>
+    [HttpPost("{id:guid}/roles")]
+    [RequireAnyPermission("Users.ManageRoles", "Users.Update")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status409Conflict)]
+    public async Task<IActionResult> AssignRole(Guid id, [FromBody] AssignRoleToUserCommand command, CancellationToken cancellationToken)
+    {
+        if (id != command.UserId)
+        {
+            return BadRequest(new { error = "ID in URL does not match ID in request body" });
+        }
+
+        _logger.LogInformation("Assigning role {RoleId} to user: {UserId}", command.RoleId, id);
+
+        var result = await _mediator.Send(command, cancellationToken);
+
+        if (result.IsSuccess)
+        {
+            _logger.LogInformation("Role assigned successfully to user: {UserId}", id);
+            return NoContent();
+        }
+
+        _logger.LogWarning("Role assignment failed for user: {UserId}. Error: {Error}", id, result.Message);
+        return result.StatusCode switch
+        {
+            404 => NotFound(new { error = result.Message }),
+            409 => Conflict(new { error = result.Message }),
+            _ => BadRequest(new { error = result.Message })
+        };
+    }
+
+    /// <summary>
+    /// Removes a role from a user
+    /// </summary>
+    /// <param name="id">User ID</param>
+    /// <param name="roleId">Role ID</param>
+    /// <param name="cancellationToken">Cancellation token</param>
+    /// <returns>Success result</returns>
+    [HttpDelete("{id:guid}/roles/{roleId:guid}")]
+    [RequireAnyPermission("Users.ManageRoles", "Users.Update")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> RemoveRole(Guid id, Guid roleId, CancellationToken cancellationToken)
+    {
+        _logger.LogInformation("Removing role {RoleId} from user: {UserId}", roleId, id);
+
+        var command = new RemoveRoleFromUserCommand(id, roleId);
+        var result = await _mediator.Send(command, cancellationToken);
+
+        if (result.IsSuccess)
+        {
+            _logger.LogInformation("Role removed successfully from user: {UserId}", id);
+            return NoContent();
+        }
+
+        _logger.LogWarning("Role removal failed for user: {UserId}. Error: {Error}", id, result.Message);
+        return result.StatusCode switch
+        {
+            404 => NotFound(new { error = result.Message }),
+            _ => BadRequest(new { error = result.Message })
+        };
+    }
+
+    /// <summary>
+    /// Verifies user email
+    /// </summary>
+    /// <param name="command">Email verification details</param>
+    /// <param name="cancellationToken">Cancellation token</param>
+    /// <returns>Success result</returns>
+    [HttpPost("verify-email")]
+    [AllowAnonymous]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    public async Task<IActionResult> VerifyEmail([FromBody] VerifyEmailCommand command, CancellationToken cancellationToken)
+    {
+        _logger.LogInformation("Verifying email with token");
+
+        var result = await _mediator.Send(command, cancellationToken);
+
+        if (result.IsSuccess)
+        {
+            _logger.LogInformation("Email verified successfully");
+            return NoContent();
+        }
+
+        _logger.LogWarning("Email verification failed. Error: {Error}", result.Message);
+        return BadRequest(new { error = result.Message });
+    }
+
+    /// <summary>
+    /// Invalidates all user sessions
+    /// </summary>
+    /// <param name="id">User ID</param>
+    /// <param name="cancellationToken">Cancellation token</param>
+    /// <returns>Success result</returns>
+    [HttpPost("{id:guid}/invalidate-sessions")]
+    [RequireAnyPermission("Users.ManageSessions", "Users.Update")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> InvalidateUserSessions(Guid id, CancellationToken cancellationToken)
+    {
+        _logger.LogInformation("Invalidating all sessions for user: {UserId}", id);
+
+        var command = new InvalidateUserSessionsCommand(id);
+        var result = await _mediator.Send(command, cancellationToken);
+
+        if (result.IsSuccess)
+        {
+            _logger.LogInformation("Sessions invalidated successfully for user: {UserId}", id);
+            return NoContent();
+        }
+
+        _logger.LogWarning("Session invalidation failed for user: {UserId}. Error: {Error}", id, result.Message);
+        return result.StatusCode switch
+        {
+            404 => NotFound(new { error = result.Message }),
             _ => BadRequest(new { error = result.Message })
         };
     }

@@ -3,7 +3,6 @@ using CleanArchTemplate.Application.Common.Interfaces;
 using CleanArchTemplate.Application.Common.Models;
 using CleanArchTemplate.Shared.Models;
 using MediatR;
-using Microsoft.EntityFrameworkCore;
 
 namespace CleanArchTemplate.Application.Features.Roles.Queries.GetAllRoles;
 
@@ -20,14 +19,15 @@ public class GetAllRolesQueryHandler : IRequestHandler<GetAllRolesQuery, Paginat
 
     public async Task<PaginatedResult<RoleSummaryDto>> Handle(GetAllRolesQuery request, CancellationToken cancellationToken)
     {
-        var query = _unitOfWork.Roles.Query();
+        var allRoles = await _unitOfWork.Roles.GetAllAsync(cancellationToken);
+        var rolesList = allRoles.ToList();
         
-        var totalCount = await query.CountAsync(cancellationToken);
+        var totalCount = rolesList.Count;
         
-        var roles = await query
+        var roles = rolesList
             .Skip((request.Pagination.PageNumber - 1) * request.Pagination.PageSize)
             .Take(request.Pagination.PageSize)
-            .ToListAsync(cancellationToken);
+            .ToList();
 
         var roleDtos = _mapper.Map<List<RoleSummaryDto>>(roles);
 

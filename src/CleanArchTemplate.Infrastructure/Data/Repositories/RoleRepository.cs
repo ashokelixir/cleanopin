@@ -1,5 +1,5 @@
-using CleanArchTemplate.Application.Common.Interfaces;
 using CleanArchTemplate.Domain.Entities;
+using CleanArchTemplate.Domain.Interfaces;
 using CleanArchTemplate.Infrastructure.Data.Contexts;
 using Microsoft.EntityFrameworkCore;
 
@@ -8,10 +8,15 @@ namespace CleanArchTemplate.Infrastructure.Data.Repositories;
 /// <summary>
 /// Role repository implementation
 /// </summary>
-public class RoleRepository : BaseRepository<Role>, IRoleRepository
+public class RoleRepository : IRoleRepository
 {
-    public RoleRepository(ApplicationDbContext context) : base(context)
+    private readonly ApplicationDbContext _context;
+    private readonly DbSet<Role> _dbSet;
+
+    public RoleRepository(ApplicationDbContext context)
     {
+        _context = context ?? throw new ArgumentNullException(nameof(context));
+        _dbSet = _context.Set<Role>();
     }
 
     public async Task<Role?> GetByNameAsync(string name, CancellationToken cancellationToken = default)
@@ -65,7 +70,7 @@ public class RoleRepository : BaseRepository<Role>, IRoleRepository
         return await query.AnyAsync(cancellationToken);
     }
 
-    public override async Task<Role?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
+    public async Task<Role?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
     {
         return await _dbSet
             .Include(r => r.RolePermissions)
@@ -75,11 +80,67 @@ public class RoleRepository : BaseRepository<Role>, IRoleRepository
             .FirstOrDefaultAsync(r => r.Id == id, cancellationToken);
     }
 
-    public override async Task<IEnumerable<Role>> GetAllAsync(CancellationToken cancellationToken = default)
+    public async Task<IEnumerable<Role>> GetAllAsync(CancellationToken cancellationToken = default)
     {
         return await _dbSet
             .Include(r => r.RolePermissions)
                 .ThenInclude(rp => rp.Permission)
             .ToListAsync(cancellationToken);
+    }
+
+    public async Task AddAsync(Role role, CancellationToken cancellationToken = default)
+    {
+        if (role == null)
+            throw new ArgumentNullException(nameof(role));
+
+        await _dbSet.AddAsync(role, cancellationToken);
+    }
+
+    public Task UpdateAsync(Role role, CancellationToken cancellationToken = default)
+    {
+        if (role == null)
+            throw new ArgumentNullException(nameof(role));
+
+        _dbSet.Update(role);
+        return Task.CompletedTask;
+    }
+
+    public Task RemoveAsync(Role role, CancellationToken cancellationToken = default)
+    {
+        if (role == null)
+            throw new ArgumentNullException(nameof(role));
+
+        _dbSet.Remove(role);
+        return Task.CompletedTask;
+    }
+
+    public async Task<IEnumerable<Role>> GetByIdsAsync(IEnumerable<Guid> roleIds, CancellationToken cancellationToken = default)
+    {
+        if (roleIds == null)
+            throw new ArgumentNullException(nameof(roleIds));
+
+        var roleIdsList = roleIds.ToList();
+        if (!roleIdsList.Any())
+            return new List<Role>();
+
+        return await _dbSet
+            .Include(r => r.RolePermissions)
+                .ThenInclude(rp => rp.Permission)
+            .Where(r => roleIdsList.Contains(r.Id))
+            .ToListAsync(cancellationToken);
+    }
+
+    public async Task<Role?> GetByIdWithPermissionsAsync(Guid id, CancellationToken cancellationToken = default)
+    {
+        return await _dbSet
+            .Include(r => r.RolePermissions)
+                .ThenInclude(rp => rp.Permission)
+            .FirstOrDefaultAsync(r => r.Id == id, cancellationToken);
+    }
+
+    public async Task<bool> HasPermissionAsync(Guid permissionId, CancellationToken cancellationToken = default)
+    {
+        return await _context.RolePermissions
+            .AnyAsync(rp => rp.PermissionId == permissionId, cancellationToken);
     }
 }

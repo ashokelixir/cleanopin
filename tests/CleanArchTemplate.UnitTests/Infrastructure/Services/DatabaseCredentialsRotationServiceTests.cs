@@ -1,3 +1,4 @@
+using CleanArchTemplate.Infrastructure.Models;
 using CleanArchTemplate.Infrastructure.Services;
 using CleanArchTemplate.Shared.Models;
 using Microsoft.Extensions.Configuration;

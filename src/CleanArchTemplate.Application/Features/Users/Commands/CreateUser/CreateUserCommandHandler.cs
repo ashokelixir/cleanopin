@@ -1,5 +1,6 @@
 using AutoMapper;
 using CleanArchTemplate.Application.Common.Interfaces;
+using CleanArchTemplate.Application.Common.Messages;
 using CleanArchTemplate.Application.Common.Models;
 using CleanArchTemplate.Domain.Entities;
 using CleanArchTemplate.Domain.ValueObjects;
@@ -15,6 +16,7 @@ public class CreateUserCommandHandler : IRequestHandler<CreateUserCommand, Resul
     private readonly IMapper _mapper;
     private readonly IPasswordService _passwordService;
     private readonly IAuditLogService _auditLogService;
+    private readonly IMessagePublisher _messagePublisher;
     private readonly ILogger<CreateUserCommandHandler> _logger;
 
     public CreateUserCommandHandler(
@@ -22,12 +24,14 @@ public class CreateUserCommandHandler : IRequestHandler<CreateUserCommand, Resul
         IMapper mapper, 
         IPasswordService passwordService,
         IAuditLogService auditLogService,
+        IMessagePublisher messagePublisher,
         ILogger<CreateUserCommandHandler> logger)
     {
         _unitOfWork = unitOfWork;
         _mapper = mapper;
         _passwordService = passwordService;
         _auditLogService = auditLogService;
+        _messagePublisher = messagePublisher;
         _logger = logger;
     }
 
@@ -82,6 +86,28 @@ public class CreateUserCommandHandler : IRequestHandler<CreateUserCommand, Resul
             });
 
         _logger.LogInformation("User created successfully with ID: {UserId}", user.Id);
+
+        // Publish user created message (fire-and-forget)
+        try
+        {
+            var userCreatedMessage = new UserCreatedMessage
+            {
+                UserId = user.Id,
+                Email = user.Email.Value,
+                FirstName = user.FirstName,
+                LastName = user.LastName,
+                IsEmailVerified = user.IsEmailVerified,
+                Roles = new List<string>() // Will be populated when roles are assigned
+            };
+
+            await _messagePublisher.PublishAsync(userCreatedMessage, "user-events", cancellationToken);
+            _logger.LogInformation("Published user created message for user {UserId}", user.Id);
+        }
+        catch (Exception ex)
+        {
+            // Log the error but don't fail the operation
+            _logger.LogError(ex, "Failed to publish user created message for user {UserId}", user.Id);
+        }
 
         // Map to DTO and return
         var userDto = _mapper.Map<UserDto>(user);

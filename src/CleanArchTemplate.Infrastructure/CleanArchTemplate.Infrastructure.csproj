@@ -33,6 +33,22 @@
     <PackageReference Include="Microsoft.Extensions.Configuration" Version="9.0.0" />
     <PackageReference Include="Microsoft.Extensions.Caching.Memory" Version="9.0.0" />
     <PackageReference Include="Microsoft.Extensions.Hosting.Abstractions" Version="9.0.0" />
+    
+    <!-- Caching packages -->
+    <PackageReference Include="Microsoft.Extensions.Caching.StackExchangeRedis" Version="9.0.0" />
+    <PackageReference Include="StackExchange.Redis" Version="2.8.16" />
+    
+    <!-- AWS SQS packages -->
+    <PackageReference Include="AWSSDK.SQS" Version="3.7.400.44" />
+    <PackageReference Include="Microsoft.Extensions.Hosting" Version="9.0.0" />
+    
+    <!-- OpenTelemetry packages for Infrastructure -->
+    <PackageReference Include="OpenTelemetry" Version="1.9.0" />
+    <PackageReference Include="OpenTelemetry.Instrumentation.EntityFrameworkCore" Version="1.0.0-beta.12" />
+    <PackageReference Include="OpenTelemetry.Instrumentation.StackExchangeRedis" Version="1.10.0-beta.1" />
+    
+    <!-- System.Diagnostics.DiagnosticSource for custom metrics -->
+    <PackageReference Include="System.Diagnostics.DiagnosticSource" Version="9.0.0" />
   </ItemGroup>
 
   <PropertyGroup>

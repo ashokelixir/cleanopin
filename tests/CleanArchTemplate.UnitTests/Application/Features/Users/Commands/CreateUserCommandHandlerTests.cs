@@ -1,8 +1,10 @@
 using AutoMapper;
 using CleanArchTemplate.Application.Common.Interfaces;
+using CleanArchTemplate.Application.Common.Messages;
 using CleanArchTemplate.Application.Common.Models;
 using CleanArchTemplate.Application.Features.Users.Commands.CreateUser;
 using CleanArchTemplate.Domain.Entities;
+using CleanArchTemplate.Domain.Interfaces;
 using CleanArchTemplate.Domain.ValueObjects;
 using CleanArchTemplate.TestUtilities.Common;
 using FluentAssertions;
@@ -19,6 +21,7 @@ public class CreateUserCommandHandlerTests : BaseTest
     private readonly Mock<IMapper> _mockMapper;
     private readonly Mock<IPasswordService> _mockPasswordService;
     private readonly Mock<IAuditLogService> _mockAuditLogService;
+    private readonly Mock<IMessagePublisher> _mockMessagePublisher;
     private readonly Mock<ILogger<CreateUserCommandHandler>> _mockLogger;
     private readonly CreateUserCommandHandler _handler;
 
@@ -29,6 +32,7 @@ public class CreateUserCommandHandlerTests : BaseTest
         _mockMapper = new Mock<IMapper>();
         _mockPasswordService = new Mock<IPasswordService>();
         _mockAuditLogService = new Mock<IAuditLogService>();
+        _mockMessagePublisher = new Mock<IMessagePublisher>();
         _mockLogger = new Mock<ILogger<CreateUserCommandHandler>>();
 
         _mockUnitOfWork.Setup(x => x.Users).Returns(_mockUserRepository.Object);
@@ -38,6 +42,7 @@ public class CreateUserCommandHandlerTests : BaseTest
             _mockMapper.Object,
             _mockPasswordService.Object,
             _mockAuditLogService.Object,
+            _mockMessagePublisher.Object,
             _mockLogger.Object);
     }
 
@@ -75,7 +80,7 @@ public class CreateUserCommandHandlerTests : BaseTest
 
         _mockUserRepository
             .Setup(x => x.AddAsync(It.IsAny<User>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync((User u, CancellationToken ct) => u);
+            .Returns(Task.CompletedTask);
 
         _mockUnitOfWork
             .Setup(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()))
@@ -238,7 +243,7 @@ public class CreateUserCommandHandlerTests : BaseTest
 
         _mockUserRepository
             .Setup(x => x.AddAsync(It.IsAny<User>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync((User u, CancellationToken ct) => u);
+            .Returns(Task.CompletedTask);
 
         _mockUnitOfWork
             .Setup(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()))

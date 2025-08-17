@@ -1,5 +1,5 @@
-using CleanArchTemplate.Application.Common.Interfaces;
 using CleanArchTemplate.Domain.Entities;
+using CleanArchTemplate.Domain.Interfaces;
 using CleanArchTemplate.Domain.ValueObjects;
 using CleanArchTemplate.Infrastructure.Data.Contexts;
 using Microsoft.EntityFrameworkCore;
@@ -9,10 +9,15 @@ namespace CleanArchTemplate.Infrastructure.Data.Repositories;
 /// <summary>
 /// User repository implementation
 /// </summary>
-public class UserRepository : BaseRepository<User>, IUserRepository
+public class UserRepository : IUserRepository
 {
-    public UserRepository(ApplicationDbContext context) : base(context)
+    private readonly ApplicationDbContext _context;
+    private readonly DbSet<User> _dbSet;
+
+    public UserRepository(ApplicationDbContext context)
     {
+        _context = context ?? throw new ArgumentNullException(nameof(context));
+        _dbSet = _context.Set<User>();
     }
 
     public async Task<User?> GetByEmailAsync(Email email, CancellationToken cancellationToken = default)
@@ -54,6 +59,15 @@ public class UserRepository : BaseRepository<User>, IUserRepository
             .ToListAsync(cancellationToken);
     }
 
+    public async Task<IEnumerable<User>> GetUsersByRoleAsync(Guid roleId, CancellationToken cancellationToken = default)
+    {
+        return await _dbSet
+            .Include(u => u.UserRoles)
+                .ThenInclude(ur => ur.Role)
+            .Where(u => u.UserRoles.Any(ur => ur.RoleId == roleId))
+            .ToListAsync(cancellationToken);
+    }
+
     public async Task<User?> GetUserWithRolesByIdAsync(Guid id, CancellationToken cancellationToken = default)
     {
         return await _dbSet
@@ -79,7 +93,7 @@ public class UserRepository : BaseRepository<User>, IUserRepository
         return await query.AnyAsync(cancellationToken);
     }
 
-    public override async Task<User?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
+    public async Task<User?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
     {
         return await _dbSet
             .Include(u => u.UserRoles)
@@ -88,11 +102,57 @@ public class UserRepository : BaseRepository<User>, IUserRepository
             .FirstOrDefaultAsync(u => u.Id == id, cancellationToken);
     }
 
-    public override async Task<IEnumerable<User>> GetAllAsync(CancellationToken cancellationToken = default)
+    public async Task<IEnumerable<User>> GetAllAsync(CancellationToken cancellationToken = default)
     {
         return await _dbSet
             .Include(u => u.UserRoles)
                 .ThenInclude(ur => ur.Role)
             .ToListAsync(cancellationToken);
+    }
+
+    public async Task<User?> GetUserWithPermissionOverridesAsync(Guid id, CancellationToken cancellationToken = default)
+    {
+        return await _dbSet
+            .Include(u => u.UserPermissions)
+                .ThenInclude(up => up.Permission)
+            .FirstOrDefaultAsync(u => u.Id == id, cancellationToken);
+    }
+
+    public async Task<User?> GetUserWithRolesAndPermissionsAsync(Guid id, CancellationToken cancellationToken = default)
+    {
+        return await _dbSet
+            .Include(u => u.UserRoles)
+                .ThenInclude(ur => ur.Role)
+                    .ThenInclude(r => r.RolePermissions)
+                        .ThenInclude(rp => rp.Permission)
+            .Include(u => u.UserPermissions)
+                .ThenInclude(up => up.Permission)
+            .FirstOrDefaultAsync(u => u.Id == id, cancellationToken);
+    }
+
+    public async Task AddAsync(User user, CancellationToken cancellationToken = default)
+    {
+        if (user == null)
+            throw new ArgumentNullException(nameof(user));
+
+        await _dbSet.AddAsync(user, cancellationToken);
+    }
+
+    public Task UpdateAsync(User user, CancellationToken cancellationToken = default)
+    {
+        if (user == null)
+            throw new ArgumentNullException(nameof(user));
+
+        _dbSet.Update(user);
+        return Task.CompletedTask;
+    }
+
+    public Task RemoveAsync(User user, CancellationToken cancellationToken = default)
+    {
+        if (user == null)
+            throw new ArgumentNullException(nameof(user));
+
+        _dbSet.Remove(user);
+        return Task.CompletedTask;
     }
 }

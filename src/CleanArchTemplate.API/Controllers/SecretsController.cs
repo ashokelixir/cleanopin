@@ -1,4 +1,6 @@
 using CleanArchTemplate.Application.Common.Interfaces;
+using CleanArchTemplate.API.Models;
+using CleanArchTemplate.API.Attributes;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -10,7 +12,8 @@ namespace CleanArchTemplate.API.Controllers;
 /// </summary>
 [ApiController]
 [Route("api/v1/[controller]")]
-[Authorize(Roles = "Administrator")]
+[Authorize]
+[RequirePermission("Secrets.Manage")]
 public class SecretsController : ControllerBase
 {
     private readonly ISecretsManagerService _secretsService;
@@ -29,6 +32,7 @@ public class SecretsController : ControllerBase
     /// </summary>
     /// <returns>List of available operations</returns>
     [HttpGet("operations")]
+    [RequirePermission("Secrets.Read")]
     public IActionResult GetAvailableOperations()
     {
         var operations = new[]
@@ -50,6 +54,7 @@ public class SecretsController : ControllerBase
     /// <param name="cancellationToken">Cancellation token</param>
     /// <returns>Success status without exposing the actual secret</returns>
     [HttpGet("test/{secretName}")]
+    [RequirePermission("Secrets.Test")]
     public async Task<IActionResult> TestSecretRetrieval(
         string secretName, 
         CancellationToken cancellationToken)
@@ -89,6 +94,7 @@ public class SecretsController : ControllerBase
     /// <param name="request">The cache invalidation request</param>
     /// <returns>Success status</returns>
     [HttpPost("cache/invalidate")]
+    [RequirePermission("Secrets.ManageCache")]
     public IActionResult InvalidateSecretCache([FromBody] InvalidateCacheRequest request)
     {
         try
@@ -116,6 +122,7 @@ public class SecretsController : ControllerBase
     /// </summary>
     /// <returns>Success status</returns>
     [HttpPost("cache/clear")]
+    [RequirePermission("Secrets.ManageCache")]
     public IActionResult ClearSecretCache()
     {
         try
@@ -199,13 +206,3 @@ public class SecretsController : ControllerBase
     }
 }
 
-/// <summary>
-/// Request model for cache invalidation
-/// </summary>
-public class InvalidateCacheRequest
-{
-    /// <summary>
-    /// The name of the secret to invalidate from cache
-    /// </summary>
-    public string SecretName { get; set; } = string.Empty;
-}

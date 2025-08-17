@@ -1,3 +1,5 @@
+using CleanArchTemplate.Domain.Interfaces;
+
 namespace CleanArchTemplate.Application.Common.Interfaces;
 
 /// <summary>
@@ -19,6 +21,11 @@ public interface IUnitOfWork : IDisposable
     /// Permission repository
     /// </summary>
     IPermissionRepository Permissions { get; }
+
+    /// <summary>
+    /// User permission repository
+    /// </summary>
+    IUserPermissionRepository UserPermissions { get; }
 
     /// <summary>
     /// Refresh token repository

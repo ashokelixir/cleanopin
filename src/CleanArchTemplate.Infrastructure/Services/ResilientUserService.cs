@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using CleanArchTemplate.Application.Common.Interfaces;
 using CleanArchTemplate.Domain.Entities;
+using CleanArchTemplate.Domain.Interfaces;
 using CleanArchTemplate.Domain.ValueObjects;
 using CleanArchTemplate.Shared.Constants;
 using Microsoft.Extensions.Logging;
@@ -66,7 +67,7 @@ public class ResilientUserService
                 
                 // Check if email already exists with resilience
                 var emailExists = await _resilienceService.ExecuteAsync(
-                    async () => await _userRepository.IsEmailExistsAsync(user.Email),
+                    async () => await _userRepository.IsEmailExistsAsync(user.Email, null, CancellationToken.None),
                     ApplicationConstants.ResiliencePolicies.Database);
 
                 if (emailExists)
@@ -74,7 +75,8 @@ public class ResilientUserService
                     throw new InvalidOperationException($"User with email {user.Email.Value} already exists");
                 }
 
-                return await _userRepository.AddAsync(user);
+                await _userRepository.AddAsync(user, CancellationToken.None);
+                return user;
             },
             ApplicationConstants.ResiliencePolicies.Critical);
     }
@@ -90,7 +92,7 @@ public class ResilientUserService
             async () =>
             {
                 _logger.LogDebug("Getting all users with resilience");
-                return await _userRepository.GetAllAsync();
+                return await _userRepository.GetAllAsync(CancellationToken.None);
             },
             // Fallback operation - return empty list
             async () =>
@@ -115,7 +117,7 @@ public class ResilientUserService
                 
                 // Verify user exists before updating
                 var existingUser = await _resilienceService.ExecuteAsync(
-                    async () => await _userRepository.GetByIdAsync(user.Id),
+                    async () => await _userRepository.GetByIdAsync(user.Id, CancellationToken.None),
                     ApplicationConstants.ResiliencePolicies.Database);
 
                 if (existingUser == null)
@@ -123,7 +125,7 @@ public class ResilientUserService
                     throw new InvalidOperationException($"User with ID {user.Id} not found");
                 }
 
-                await _userRepository.UpdateAsync(user);
+                await _userRepository.UpdateAsync(user, CancellationToken.None);
             },
             ApplicationConstants.ResiliencePolicies.Critical);
     }
@@ -142,7 +144,7 @@ public class ResilientUserService
                 
                 // Verify user exists before deleting
                 var existingUser = await _resilienceService.ExecuteAsync(
-                    async () => await _userRepository.GetByIdAsync(userId),
+                    async () => await _userRepository.GetByIdAsync(userId, CancellationToken.None),
                     ApplicationConstants.ResiliencePolicies.Database);
 
                 if (existingUser == null)
@@ -151,7 +153,7 @@ public class ResilientUserService
                     return;
                 }
 
-                await _userRepository.DeleteAsync(userId);
+                await _userRepository.RemoveAsync(existingUser, CancellationToken.None);
             },
             ApplicationConstants.ResiliencePolicies.Critical);
     }
@@ -170,7 +172,7 @@ public class ResilientUserService
                     _logger.LogDebug("Performing user repository health check");
                     
                     // Simple query to test database connectivity
-                    var users = await _userRepository.GetAllAsync();
+                    var users = await _userRepository.GetAllAsync(CancellationToken.None);
                     return true;
                 },
                 ApplicationConstants.ResiliencePolicies.NonCritical);
