@@ -457,3 +457,59 @@ variable "sqs_fifo_throughput_limit" {
     error_message = "FIFO throughput limit must be either 'perQueue' or 'perMessageGroupId'."
   }
 }
+
+# SNS Configuration
+variable "enable_sns_notifications" {
+  description = "Enable SNS notifications for SQS alarms"
+  type        = bool
+  default     = true
+}
+
+variable "sns_enable_encryption" {
+  description = "Enable server-side encryption for SNS topics"
+  type        = bool
+  default     = true
+}
+
+variable "sns_kms_key_id" {
+  description = "The ID of an AWS-managed customer master key (CMK) for SNS or a custom CMK"
+  type        = string
+  default     = null
+}
+
+variable "sns_enable_email_notifications" {
+  description = "Enable email notifications for SNS topics"
+  type        = bool
+  default     = true
+}
+
+variable "sns_notification_emails" {
+  description = "List of email addresses to receive notifications"
+  type        = list(string)
+  default     = []
+}
+
+variable "sns_enable_slack_notifications" {
+  description = "Enable Slack notifications for SNS topics"
+  type        = bool
+  default     = false
+}
+
+variable "sns_slack_webhook_url" {
+  description = "Slack webhook URL for notifications"
+  type        = string
+  default     = null
+  sensitive   = true
+}
+
+variable "sns_enable_sms_notifications" {
+  description = "Enable SMS notifications for critical alerts"
+  type        = bool
+  default     = false
+}
+
+variable "sns_notification_phone_numbers" {
+  description = "List of phone numbers to receive SMS notifications (E.164 format)"
+  type        = list(string)
+  default     = []
+}

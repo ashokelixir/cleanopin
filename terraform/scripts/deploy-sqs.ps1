@@ -157,8 +157,10 @@ try {
     $PlanArgs = @(
         "plan",
         "-var-file=environments/$Environment.tfvars",
+        "-target=module.sns",
         "-target=module.sqs",
         "-target=module.iam.aws_iam_role_policy.ecs_task_sqs",
+        "-target=module.iam.aws_iam_role_policy.ecs_task_sns",
         "-out=$PlanFile"
     )
     
@@ -226,7 +228,10 @@ try {
             "sqs_permission_events_queue_url",
             "sqs_audit_events_queue_arn",
             "sqs_audit_events_queue_url",
-            "sqs_all_queue_arns"
+            "sqs_all_queue_arns",
+            "sns_sqs_alerts_topic_arn",
+            "sns_sqs_dlq_alerts_topic_arn",
+            "sns_infrastructure_alerts_topic_arn"
         )
         
         Write-Log "SQS Infrastructure Outputs:"
@@ -252,13 +257,17 @@ try {
         Write-Log "  Dead Letter Queues: Configured for all main queues"
         Write-Log "  Server-Side Encryption: Enabled"
         Write-Log "  CloudWatch Alarms: Enabled"
+        Write-Log "  SNS Topics: sqs-alerts, sqs-dlq-alerts, infrastructure-alerts"
+        Write-Log "  SNS Notifications: Email, Slack (optional), SMS (optional)"
         
         Write-Log ""
         Write-Log "Next Steps:"
-        Write-Log "1. Update application configuration with queue URLs"
-        Write-Log "2. Deploy ECS service to use the new SQS permissions"
-        Write-Log "3. Test message publishing and consumption"
-        Write-Log "4. Monitor CloudWatch alarms and metrics"
+        Write-Log "1. Confirm SNS email subscriptions in your inbox"
+        Write-Log "2. Update application configuration with queue URLs"
+        Write-Log "3. Deploy ECS service to use the new SQS and SNS permissions"
+        Write-Log "4. Test message publishing and consumption"
+        Write-Log "5. Test SNS notifications by triggering CloudWatch alarms"
+        Write-Log "6. Monitor CloudWatch alarms and metrics"
     }
     
     Write-Log "$ScriptName completed successfully"

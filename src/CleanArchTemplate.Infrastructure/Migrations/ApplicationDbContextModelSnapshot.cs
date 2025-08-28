@@ -296,6 +296,9 @@ namespace CleanArchTemplate.Infrastructure.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("character varying(100)");
 
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid");
+
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("timestamp with time zone");
 
@@ -314,6 +317,8 @@ namespace CleanArchTemplate.Infrastructure.Migrations
                     b.HasIndex("Name")
                         .IsUnique()
                         .HasDatabaseName("IX_Roles_Name");
+
+                    b.HasIndex("TenantId");
 
                     b.ToTable("Roles", (string)null);
                 });
@@ -362,6 +367,189 @@ namespace CleanArchTemplate.Infrastructure.Migrations
                         .HasDatabaseName("IX_RolePermissions_RoleId_PermissionId");
 
                     b.ToTable("RolePermissions", (string)null);
+                });
+
+            modelBuilder.Entity("CleanArchTemplate.Domain.Entities.Tenant", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Configuration")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("text")
+                        .HasDefaultValue("{}");
+
+                    b.Property<string>("ConnectionString")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("CreatedBy")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Identifier")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<bool>("IsActive")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(true);
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<DateTime?>("SubscriptionExpiresAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("UpdatedBy")
+                        .HasColumnType("text");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Identifier")
+                        .IsUnique()
+                        .HasDatabaseName("IX_Tenants_Identifier");
+
+                    b.HasIndex("IsActive")
+                        .HasDatabaseName("IX_Tenants_IsActive");
+
+                    b.HasIndex("IsActive", "SubscriptionExpiresAt")
+                        .HasDatabaseName("IX_Tenants_IsActive_SubscriptionExpiresAt");
+
+                    b.ToTable("Tenants", (string)null);
+                });
+
+            modelBuilder.Entity("CleanArchTemplate.Domain.Entities.TenantConfiguration", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("CreatedBy")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("DataType")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<bool>("IsSystemConfiguration")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false);
+
+                    b.Property<string>("Key")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("UpdatedBy")
+                        .HasColumnType("text");
+
+                    b.Property<string>("Value")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("IsSystemConfiguration")
+                        .HasDatabaseName("IX_TenantConfigurations_IsSystemConfiguration");
+
+                    b.HasIndex("TenantId")
+                        .HasDatabaseName("IX_TenantConfigurations_TenantId");
+
+                    b.HasIndex("TenantId", "Key")
+                        .IsUnique()
+                        .HasDatabaseName("IX_TenantConfigurations_TenantId_Key");
+
+                    b.ToTable("TenantConfigurations", (string)null);
+                });
+
+            modelBuilder.Entity("CleanArchTemplate.Domain.Entities.TenantUsageMetric", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Metadata")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("text")
+                        .HasDefaultValue("{}");
+
+                    b.Property<string>("MetricName")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<DateTime>("RecordedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("RecordedBy")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Tags")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("text")
+                        .HasDefaultValue("{}");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid");
+
+                    b.Property<double>("Value")
+                        .HasColumnType("decimal(18,6)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("MetricName")
+                        .HasDatabaseName("IX_TenantUsageMetrics_MetricName");
+
+                    b.HasIndex("RecordedAt")
+                        .HasDatabaseName("IX_TenantUsageMetrics_RecordedAt");
+
+                    b.HasIndex("RecordedBy")
+                        .HasDatabaseName("IX_TenantUsageMetrics_RecordedBy");
+
+                    b.HasIndex("TenantId")
+                        .HasDatabaseName("IX_TenantUsageMetrics_TenantId");
+
+                    b.HasIndex("TenantId", "MetricName")
+                        .HasDatabaseName("IX_TenantUsageMetrics_TenantId_MetricName");
+
+                    b.HasIndex("TenantId", "RecordedAt")
+                        .HasDatabaseName("IX_TenantUsageMetrics_TenantId_RecordedAt");
+
+                    b.HasIndex("TenantId", "MetricName", "RecordedAt")
+                        .HasDatabaseName("IX_TenantUsageMetrics_TenantId_MetricName_RecordedAt");
+
+                    b.ToTable("TenantUsageMetrics", (string)null);
                 });
 
             modelBuilder.Entity("CleanArchTemplate.Domain.Entities.User", b =>
@@ -421,6 +609,9 @@ namespace CleanArchTemplate.Infrastructure.Migrations
                     b.Property<DateTime?>("PasswordResetTokenExpiry")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid");
+
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("timestamp with time zone");
 
@@ -438,6 +629,8 @@ namespace CleanArchTemplate.Infrastructure.Migrations
 
                     b.HasIndex("LastLoginAt")
                         .HasDatabaseName("IX_Users_LastLoginAt");
+
+                    b.HasIndex("TenantId");
 
                     b.ToTable("Users", (string)null);
                 });
@@ -599,6 +792,15 @@ namespace CleanArchTemplate.Infrastructure.Migrations
                     b.Navigation("User");
                 });
 
+            modelBuilder.Entity("CleanArchTemplate.Domain.Entities.Role", b =>
+                {
+                    b.HasOne("CleanArchTemplate.Domain.Entities.Tenant", null)
+                        .WithMany("Roles")
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("CleanArchTemplate.Domain.Entities.RolePermission", b =>
                 {
                     b.HasOne("CleanArchTemplate.Domain.Entities.Permission", "Permission")
@@ -618,8 +820,36 @@ namespace CleanArchTemplate.Infrastructure.Migrations
                     b.Navigation("Role");
                 });
 
+            modelBuilder.Entity("CleanArchTemplate.Domain.Entities.TenantConfiguration", b =>
+                {
+                    b.HasOne("CleanArchTemplate.Domain.Entities.Tenant", "Tenant")
+                        .WithMany()
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Tenant");
+                });
+
+            modelBuilder.Entity("CleanArchTemplate.Domain.Entities.TenantUsageMetric", b =>
+                {
+                    b.HasOne("CleanArchTemplate.Domain.Entities.Tenant", "Tenant")
+                        .WithMany()
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Tenant");
+                });
+
             modelBuilder.Entity("CleanArchTemplate.Domain.Entities.User", b =>
                 {
+                    b.HasOne("CleanArchTemplate.Domain.Entities.Tenant", null)
+                        .WithMany("Users")
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
                     b.OwnsOne("CleanArchTemplate.Domain.ValueObjects.Email", "Email", b1 =>
                         {
                             b1.Property<Guid>("UserId")
@@ -637,7 +867,7 @@ namespace CleanArchTemplate.Infrastructure.Migrations
                                 .IsUnique()
                                 .HasDatabaseName("IX_Users_Email");
 
-                            b1.ToTable("Users");
+                            b1.ToTable("Users", (string)null);
 
                             b1.WithOwner()
                                 .HasForeignKey("UserId");
@@ -699,6 +929,13 @@ namespace CleanArchTemplate.Infrastructure.Migrations
                     b.Navigation("RolePermissions");
 
                     b.Navigation("UserRoles");
+                });
+
+            modelBuilder.Entity("CleanArchTemplate.Domain.Entities.Tenant", b =>
+                {
+                    b.Navigation("Roles");
+
+                    b.Navigation("Users");
                 });
 
             modelBuilder.Entity("CleanArchTemplate.Domain.Entities.User", b =>

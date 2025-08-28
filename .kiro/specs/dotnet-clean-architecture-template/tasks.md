@@ -17,11 +17,12 @@
 
 
 
-  - Create base entity classes (BaseEntity, BaseAuditableEntity) with proper abstractions
-  - Implement domain entities for User, Role, Permission with navigation properties
+  - Create base entity classes (BaseEntity, BaseAuditableEntity, BaseTenantEntity) with proper abstractions
+  - Implement domain entities for Tenant, User, Role, Permission with navigation properties and tenant relationships
+  - Create ITenantEntity interface for tenant-aware entities
   - Create value objects for common domain concepts (Email, Password)
   - Implement domain events infrastructure and event handlers
-  - _Requirements: 1.3, 6.1, 6.2, 6.3_
+  - _Requirements: 1.3, 6.1, 6.2, 6.3, 12.1, 12.2_
 
 - [x] 3. Set up shared layer and common utilities
 
@@ -54,12 +55,12 @@
 
 
 
-  - Create DbContext with entity configurations and relationships
-  - Implement repository pattern with generic base repository
-  - Create unit of work pattern for transaction management
-  - Set up database migrations and seed data
-  - Configure connection pooling and query optimization
-  - _Requirements: 4.1, 4.2, 4.3, 4.4, 4.5_
+  - Create DbContext with entity configurations, relationships, and global query filters for tenant isolation
+  - Implement repository pattern with generic base repository and tenant-aware repository interfaces
+  - Create unit of work pattern for transaction management with tenant context
+  - Set up database migrations and seed data including tenant setup
+  - Configure connection pooling, query optimization, and tenant-scoped indexing
+  - _Requirements: 4.1, 4.2, 4.3, 4.4, 4.5, 4.6, 12.2_
 
 - [x] 6. Build JWT authentication and authorization system
 
@@ -67,12 +68,12 @@
 
 
 
-  - Implement JWT token service with token generation and validation
-  - Create authentication middleware and JWT configuration
-  - Implement role-based authorization with policies and attributes
-  - Create refresh token mechanism with secure storage
-  - Build user registration and login endpoints with validation
-  - _Requirements: 2.1, 2.2, 2.3, 2.4, 2.5_
+  - Implement JWT token service with token generation, validation, and tenant claims
+  - Create authentication middleware and JWT configuration with tenant context
+  - Implement tenant-aware role-based authorization with policies and attributes
+  - Create refresh token mechanism with secure storage and tenant isolation
+  - Build user registration and login endpoints with validation and tenant association
+  - _Requirements: 2.1, 2.2, 2.3, 2.4, 2.5, 2.6_
 
 - [x] 6.1 Implement AuthController with authentication endpoints
 
@@ -109,15 +110,61 @@
   - Create fallback mechanisms for critical operations
   - _Requirements: 3.1, 3.2, 3.3, 3.4, 3.5_
 
-- [ ] 8. Set up multi-environment caching strategy
-  - Create cache service interface with get, set, and remove operations
-  - Implement in-memory cache service for development environment
-  - Implement Redis distributed cache service for production
-  - Configure cache key naming conventions and expiration policies
-  - Add cache-aside pattern implementation with invalidation strategies
-  - _Requirements: 12.1, 12.2, 12.3, 12.4, 12.5_
+- [ ] 8. Implement multi-tenancy infrastructure
 
-- [x] 9. Implement comprehensive logging with Serilog
+
+
+
+
+
+
+
+  - Create ITenantResolver interface with multiple resolution strategies (subdomain, header, JWT claims)
+  - Implement TenantContext service for managing current tenant information
+  - Create TenantMiddleware for tenant resolution and context setting
+  - Build tenant management service with CRUD operations for tenant entities
+  - Implement tenant-aware logging with tenant information in log context
+  - _Requirements: 12.1, 12.2, 12.3, 12.6_
+
+- [x] 8.1 Create tenant resolution services
+
+
+  - Implement SubdomainTenantResolver for subdomain-based tenant identification
+  - Create HeaderTenantResolver for header-based tenant resolution
+  - Build JwtTenantResolver for JWT claims-based tenant identification
+  - Create composite resolver that tries multiple strategies in order
+  - Add tenant caching to improve resolution performance
+  - _Requirements: 12.1, 12.6_
+
+- [x] 8.2 Build tenant management features
+
+
+
+
+
+
+
+
+
+
+
+  - Create tenant registration and onboarding endpoints
+  - Implement tenant configuration management with key-value storage
+  - Build tenant feature flag service for per-tenant feature control
+  - Create tenant deactivation and reactivation functionality
+  - Add tenant usage metrics and analytics collection
+  - _Requirements: 12.3, 12.5, 12.6_
+
+- [ ] 9. Set up multi-environment caching strategy
+  - Create cache service interface with get, set, and remove operations
+  - Implement tenant-aware cache service with tenant-scoped key isolation
+  - Implement in-memory cache service for development environment with tenant support
+  - Implement Redis distributed cache service for production with tenant key prefixing
+  - Configure cache key naming conventions, expiration policies, and tenant isolation
+  - Add cache-aside pattern implementation with invalidation strategies and tenant-specific eviction
+  - _Requirements: 13.1, 13.2, 13.3, 13.4, 13.5, 13.6_
+
+- [x] 10. Implement comprehensive logging with Serilog
 
 
 
@@ -133,7 +180,7 @@
   - Add performance logging for database queries and API calls
   - _Requirements: 5.1, 5.4, 6.4_
 
-- [x] 10. Integrate OpenTelemetry and Datadog observability
+- [x] 11. Integrate OpenTelemetry and Datadog observability
 
 
 
@@ -146,7 +193,7 @@
   - Add telemetry for database operations, cache operations, and external calls
   - _Requirements: 5.2, 5.3, 5.5, 7.1, 7.2, 7.3, 7.4, 7.5_
 
-- [x] 11. Build AWS SQS messaging infrastructure
+- [x] 12. Build AWS SQS messaging infrastructure
 
 
 
@@ -159,7 +206,7 @@
   - Implement message serialization and deserialization with proper typing
   - _Requirements: 9.1, 9.2, 9.3, 9.4, 9.5_
 
-- [x] 12. Implement comprehensive API security measures
+- [x] 13. Implement comprehensive API security measures
 
 
 
@@ -173,21 +220,21 @@
   - Configure API versioning and secure Swagger documentation
   - _Requirements: 10.1, 10.2, 10.3, 10.4, 10.5, 10.6_
 
-- [x] 13. Create user and role management features
+- [x] 14. Create user and role management features
 
 
 
 
 
 
-  - Build user CRUD operations with proper validation and authorization
-  - Implement role management with permission assignment capabilities
-  - Create user-role assignment endpoints with audit logging
-  - Build user profile management with email verification
-  - Implement user session management and token invalidation
-  - _Requirements: 6.1, 6.2, 6.3, 6.4, 6.5_
+  - Build tenant-scoped user CRUD operations with proper validation and authorization
+  - Implement role management with permission assignment capabilities within tenant boundaries
+  - Create user-role assignment endpoints with audit logging and tenant isolation
+  - Build user profile management with email verification and tenant association
+  - Implement user session management and token invalidation with tenant context
+  - _Requirements: 6.1, 6.2, 6.3, 6.4, 6.5, 6.6_
 
-- [x] 14. Set up comprehensive testing framework
+- [x] 15. Set up comprehensive testing framework
 
 
 
@@ -202,7 +249,7 @@
   - Configure test coverage reporting and quality gates
   - _Requirements: 8.1, 8.2, 8.3, 8.4, 8.5_
 
-- [ ] 15. Build Docker containerization setup
+- [x] 16. Build Docker containerization setup
 
 
 
@@ -218,7 +265,7 @@
   - Create .dockerignore file to optimize build context
   - _Requirements: 11.1, 11.2, 11.5_
 
-- [x] 16. Create Terraform infrastructure foundation
+- [x] 17. Create Terraform infrastructure foundation
 
 
 
@@ -232,7 +279,7 @@
   - aws access key 
   - _Requirements: 11.3, 11.4, 11.5_
 
-- [x] 17. Implement core AWS infrastructure with Terraform
+- [x] 18. Implement core AWS infrastructure with Terraform
 
 
 
@@ -245,7 +292,7 @@
   - Create VPC endpoints for AWS services (S3, ECR, Secrets Manager)
   - _Requirements: 11.4, 11.5_
 
-- [x] 18. Provision RDS PostgreSQL with Terraform
+- [x] 19. Provision RDS PostgreSQL with Terraform
 
 
 
@@ -258,7 +305,7 @@
   - Configure database secrets in AWS Secrets Manager with automatic rotation
   - _Requirements: 4.1, 4.2, 11.3_
 
-- [ ] 19. Set up ElastiCache Redis cluster with Terraform
+- [ ] 20. Set up ElastiCache Redis cluster with Terraform
   - Create ElastiCache subnet group for Redis deployment
   - Configure Redis cluster with replication and automatic failover
   - Set up Redis parameter group for performance optimization
@@ -266,7 +313,12 @@
   - Configure CloudWatch monitoring and alerting for Redis metrics
   - _Requirements: 12.2, 12.3, 11.5_
 
-- [ ] 20. Create SQS queues and messaging infrastructure with Terraform
+- [x] 21. Create SQS queues and messaging infrastructure with Terraform
+
+
+
+
+
   - Set up standard and FIFO SQS queues for different message types
   - Configure dead letter queues with appropriate retry policies
   - Implement SQS access policies and IAM roles for queue access
@@ -274,7 +326,7 @@
   - Create SNS topics for queue notifications and alerting
   - _Requirements: 9.1, 9.2, 9.3, 9.4_
 
-- [x] 21. Implement ECS Fargate infrastructure with Terraform
+- [x] 22. Implement ECS Fargate infrastructure with Terraform
 
 
 
@@ -287,7 +339,7 @@
   - Set up CloudWatch log groups for container logging
   - _Requirements: 11.4, 11.5_
 
-- [x] 22. Configure IAM roles and policies with Terraform
+- [x] 23. Configure IAM roles and policies with Terraform
 
 
 
@@ -300,7 +352,7 @@
   - Set up IAM policies following principle of least privilege
   - _Requirements: 11.3, 11.4_
 
-- [ ] 23. Set up monitoring and observability infrastructure with Terraform
+- [ ] 24. Set up monitoring and observability infrastructure with Terraform
   - Create CloudWatch log groups with proper retention policies
   - Configure CloudWatch alarms for application and infrastructure metrics
   - Set up CloudWatch dashboards for monitoring key performance indicators
@@ -308,7 +360,7 @@
   - Configure AWS X-Ray for distributed tracing support
   - _Requirements: 5.2, 5.3, 7.1, 7.2, 7.3_
 
-- [x] 24. Implement AWS Secrets Manager integration
+- [x] 25. Implement AWS Secrets Manager integration
 
 
 
@@ -325,7 +377,7 @@
   - Add secret caching mechanisms to reduce API calls
   - _Requirements: 11.3_
 
-- [x] 25. Create Terraform deployment pipeline configuration
+- [x] 26. Create Terraform deployment pipeline configuration
 
 
 
@@ -339,7 +391,7 @@
   - Create infrastructure testing with Terratest or similar tools
   - _Requirements: 11.4, 11.5_
 
-- [ ] 26. Add performance monitoring and metrics
+- [ ] 27. Add performance monitoring and metrics
   - Implement custom performance counters for API endpoints
   - Set up database query performance monitoring
   - Create memory usage and garbage collection metrics
@@ -347,7 +399,7 @@
   - Configure performance alerting and threshold monitoring
   - _Requirements: 7.1, 7.2, 7.3, 7.4, 7.5_
 
-- [ ] 27. Create project templates and documentation
+- [ ] 28. Create project templates and documentation
   - Build dotnet new template configuration files
   - Create comprehensive README with setup instructions
   - Write API documentation with OpenAPI specifications
@@ -355,7 +407,7 @@
   - Add code examples and best practices documentation
   - _Requirements: 1.1, 1.2, 1.3, 1.4_
 
-- [x] 28. Implement global error handling and validation
+- [x] 29. Implement global error handling and validation
 
 
 
@@ -368,7 +420,7 @@
   - Create user-friendly error messages and status codes
   - _Requirements: 10.3, 10.4_
 
-- [ ] 29. Configure environment-specific settings and deployment
+- [ ] 30. Configure environment-specific settings and deployment
   - Set up appsettings files for different environments
   - Configure dependency injection with environment-specific services
   - Implement feature flags for environment-specific functionality
@@ -376,10 +428,11 @@
   - Create environment-specific Docker Compose overrides
   - _Requirements: 11.2, 12.5_
 
-- [ ] 30. Add final integration and end-to-end testing
-  - Create end-to-end test scenarios covering complete user workflows
-  - Test authentication flows with token generation and validation
-  - Validate caching behavior across different environments
-  - Test messaging flows with SQS integration
-  - Verify observability and monitoring functionality with Terraform-provisioned infrastructure
-  - _Requirements: 8.2, 8.5_
+- [ ] 31. Add final integration and end-to-end testing
+  - Create end-to-end test scenarios covering complete user workflows with multi-tenancy
+  - Test authentication flows with token generation, validation, and tenant context
+  - Validate tenant isolation in data access, caching, and authorization
+  - Test messaging flows with SQS integration and tenant-scoped messages
+  - Verify observability and monitoring functionality with tenant-aware logging
+  - Test tenant resolution strategies and tenant management operations
+  - _Requirements: 8.2, 8.5, 12.7, 12.8_

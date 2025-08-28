@@ -152,6 +152,40 @@ module "secrets" {
   ]
 }
 
+# SNS Notification Module
+module "sns" {
+  source = "./modules/sns"
+
+  name_prefix = local.name_prefix
+  environment = var.environment
+
+  # Security Configuration
+  enable_encryption = var.sns_enable_encryption
+  kms_key_id        = var.sns_kms_key_id
+
+  # IAM Configuration
+  ecs_task_role_arn = module.iam.ecs_task_role_arn
+
+  # Email Notifications
+  enable_email_notifications = var.enable_sns_notifications ? var.sns_enable_email_notifications : false
+  notification_emails        = var.sns_notification_emails
+
+  # Slack Notifications
+  enable_slack_notifications = var.enable_sns_notifications ? var.sns_enable_slack_notifications : false
+  slack_webhook_url          = var.sns_slack_webhook_url
+
+  # SMS Notifications
+  enable_sms_notifications    = var.enable_sns_notifications ? var.sns_enable_sms_notifications : false
+  notification_phone_numbers  = var.sns_notification_phone_numbers
+
+  tags = local.common_tags
+
+  depends_on = [
+    module.vpc,
+    module.iam
+  ]
+}
+
 # SQS Messaging Module
 module "sqs" {
   source = "./modules/sqs"
@@ -179,7 +213,7 @@ module "sqs" {
   queue_depth_alarm_threshold  = var.sqs_queue_depth_alarm_threshold
   message_age_alarm_threshold  = var.sqs_message_age_alarm_threshold
   dlq_messages_alarm_threshold = var.sqs_dlq_messages_alarm_threshold
-  alarm_actions                = var.sqs_alarm_actions
+  alarm_actions                = var.enable_sns_notifications ? module.sns.all_alarm_action_arns : var.sqs_alarm_actions
 
   # Environment-specific settings
   enable_high_throughput = var.environment == "prod" ? var.sqs_enable_high_throughput : false
@@ -189,7 +223,8 @@ module "sqs" {
   tags = local.common_tags
 
   depends_on = [
-    module.vpc
+    module.vpc,
+    module.sns
   ]
 }
 
@@ -242,8 +277,8 @@ module "iam" {
   enable_xray       = var.enable_xray
   enable_s3_access  = var.enable_s3_access
   s3_bucket_arns    = var.s3_bucket_arns
-  enable_sns_access = var.enable_sns_access
-  sns_topic_arns    = var.sns_topic_arns
+  enable_sns_access = var.enable_sns_notifications
+  sns_topic_arns    = var.enable_sns_notifications ? module.sns.all_topic_arns : var.sns_topic_arns
 
   # RDS Configuration
   enable_rds_access  = var.enable_rds_access
@@ -254,7 +289,8 @@ module "iam" {
 
   depends_on = [
     module.rds,
-    module.sqs
+    module.sqs,
+    module.sns
   ]
 }
 

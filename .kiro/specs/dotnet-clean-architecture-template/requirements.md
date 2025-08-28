@@ -2,7 +2,7 @@
 
 ## Introduction
 
-This feature involves creating an opinionated .NET 8 template boilerplate for clean architecture that serves as a comprehensive starter for modular monolith web API applications. The template will incorporate enterprise-grade features including authentication, resilience patterns, database integration, observability, security, containerization, and testing strategies to provide developers with a production-ready foundation.
+This feature involves creating an opinionated .NET 8 template boilerplate for clean architecture that serves as a comprehensive starter for modular monolith web API applications. The template will incorporate enterprise-grade features including authentication, multi-tenancy, resilience patterns, database integration, observability, security, containerization, and testing strategies to provide developers with a production-ready foundation for SaaS applications.
 
 ## Requirements
 
@@ -19,15 +19,16 @@ This feature involves creating an opinionated .NET 8 template boilerplate for cl
 
 ### Requirement 2: Authentication and Authorization (RBAC)
 
-**User Story:** As a system administrator, I want role-based access control with JWT authentication, so that I can secure API endpoints and manage user permissions effectively.
+**User Story:** As a system administrator, I want role-based access control with JWT authentication and tenant-aware authorization, so that I can secure API endpoints and manage user permissions effectively within tenant boundaries.
 
 #### Acceptance Criteria
 
-1. WHEN a user attempts to authenticate THEN the system SHALL validate credentials and issue JWT tokens with appropriate claims
-2. WHEN an authenticated request is made THEN the system SHALL validate the JWT token and extract user identity and roles
-3. WHEN authorization is required THEN the system SHALL implement role-based access control using policies and attributes
-4. WHEN user roles are managed THEN the system SHALL support hierarchical role structures and permission assignments
+1. WHEN a user attempts to authenticate THEN the system SHALL validate credentials and issue JWT tokens with appropriate claims including tenant information
+2. WHEN an authenticated request is made THEN the system SHALL validate the JWT token and extract user identity, roles, and tenant context
+3. WHEN authorization is required THEN the system SHALL implement role-based access control using policies and attributes with tenant-scoped permissions
+4. WHEN user roles are managed THEN the system SHALL support hierarchical role structures and permission assignments within tenant boundaries
 5. WHEN tokens expire THEN the system SHALL provide refresh token functionality for seamless user experience
+6. WHEN cross-tenant access is attempted THEN the system SHALL enforce tenant isolation in authorization decisions
 
 ### Requirement 3: Resilience Framework Integration
 
@@ -43,15 +44,16 @@ This feature involves creating an opinionated .NET 8 template boilerplate for cl
 
 ### Requirement 4: Database Integration with PostgreSQL
 
-**User Story:** As a developer, I want PostgreSQL integration with Entity Framework Core, so that I can persist data efficiently with proper migrations and query optimization.
+**User Story:** As a developer, I want PostgreSQL integration with Entity Framework Core and tenant-aware data access, so that I can persist data efficiently with proper migrations, query optimization, and tenant isolation.
 
 #### Acceptance Criteria
 
 1. WHEN the application starts THEN the system SHALL establish connection to PostgreSQL using Entity Framework Core
-2. WHEN database schema changes are needed THEN the system SHALL support EF Core migrations with proper versioning
-3. WHEN data access is performed THEN the system SHALL implement repository pattern with unit of work
-4. WHEN queries are executed THEN the system SHALL provide optimized query patterns and connection pooling
+2. WHEN database schema changes are needed THEN the system SHALL support EF Core migrations with proper versioning and tenant-aware schema design
+3. WHEN data access is performed THEN the system SHALL implement repository pattern with unit of work and automatic tenant filtering
+4. WHEN queries are executed THEN the system SHALL provide optimized query patterns, connection pooling, and tenant-scoped data access
 5. WHEN database operations fail THEN the system SHALL implement proper transaction handling and rollback mechanisms
+6. WHEN tenant data is accessed THEN the system SHALL automatically apply tenant filters to prevent cross-tenant data access
 
 ### Requirement 5: Logging and Observability
 
@@ -67,15 +69,16 @@ This feature involves creating an opinionated .NET 8 template boilerplate for cl
 
 ### Requirement 6: User and Role Management
 
-**User Story:** As an administrator, I want comprehensive user and role management capabilities, so that I can manage system access and permissions efficiently.
+**User Story:** As an administrator, I want comprehensive user and role management capabilities with tenant isolation, so that I can manage system access and permissions efficiently within tenant boundaries.
 
 #### Acceptance Criteria
 
-1. WHEN users are created THEN the system SHALL provide user registration with email verification and password policies
-2. WHEN roles are managed THEN the system SHALL support CRUD operations for roles and permissions
-3. WHEN user-role assignments are made THEN the system SHALL allow multiple role assignments per user
-4. WHEN user profiles are updated THEN the system SHALL maintain audit trails for all user management operations
-5. WHEN user access is revoked THEN the system SHALL provide immediate token invalidation and session management
+1. WHEN users are created THEN the system SHALL provide user registration with email verification, password policies, and tenant association
+2. WHEN roles are managed THEN the system SHALL support CRUD operations for roles and permissions within tenant scope
+3. WHEN user-role assignments are made THEN the system SHALL allow multiple role assignments per user within their tenant context
+4. WHEN user profiles are updated THEN the system SHALL maintain audit trails for all user management operations with tenant information
+5. WHEN user access is revoked THEN the system SHALL provide immediate token invalidation and session management within tenant scope
+6. WHEN tenant administrators manage users THEN the system SHALL restrict user management operations to their own tenant
 
 ### Requirement 7: Performance Monitoring
 
@@ -138,7 +141,22 @@ This feature involves creating an opinionated .NET 8 template boilerplate for cl
 4. WHEN ECS deployment is performed THEN the system SHALL provide task definitions and service configurations for Fargate
 5. WHEN health checks are implemented THEN the system SHALL provide proper health check endpoints for container orchestration
 
-### Requirement 12: Caching Strategy
+### Requirement 12: Multi-Tenancy Support
+
+**User Story:** As a SaaS provider, I want comprehensive multi-tenancy support with tenant isolation and data segregation, so that I can serve multiple customers securely from a single application instance.
+
+#### Acceptance Criteria
+
+1. WHEN a tenant is identified THEN the system SHALL resolve tenant context from subdomain, header, or JWT claims
+2. WHEN database operations are performed THEN the system SHALL implement tenant-based data isolation using tenant ID filtering
+3. WHEN tenant registration occurs THEN the system SHALL support tenant onboarding with custom configuration and branding
+4. WHEN cross-tenant access is attempted THEN the system SHALL prevent data leakage between tenants through security policies
+5. WHEN tenant-specific features are needed THEN the system SHALL support feature flags and configuration per tenant
+6. WHEN tenant metrics are collected THEN the system SHALL provide tenant-scoped logging, monitoring, and analytics
+7. WHEN tenant data is cached THEN the system SHALL implement tenant-aware caching with proper key isolation
+8. WHEN tenant migrations are performed THEN the system SHALL support tenant-specific database schema changes and data migrations
+
+### Requirement 13: Caching Strategy
 
 **User Story:** As a developer, I want flexible caching implementation with in-memory caching for development and Redis for production, so that I can optimize application performance across different environments.
 
@@ -149,3 +167,4 @@ This feature involves creating an opinionated .NET 8 template boilerplate for cl
 3. WHEN cache keys are managed THEN the system SHALL provide consistent key naming and expiration strategies
 4. WHEN cache invalidation is needed THEN the system SHALL support cache eviction patterns and cache-aside implementation
 5. WHEN caching configuration is applied THEN the system SHALL allow environment-specific cache configuration through settings
+6. WHEN multi-tenant caching is implemented THEN the system SHALL ensure tenant isolation in cache keys and data

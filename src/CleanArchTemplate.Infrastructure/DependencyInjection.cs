@@ -9,6 +9,7 @@ using CleanArchTemplate.Infrastructure.Data.Seed;
 using CleanArchTemplate.Infrastructure.Extensions;
 using CleanArchTemplate.Infrastructure.Messaging;
 using CleanArchTemplate.Infrastructure.Messaging.Handlers;
+using CleanArchTemplate.Infrastructure.MultiTenancy;
 using CleanArchTemplate.Infrastructure.Services;
 using CleanArchTemplate.Shared.Models;
 using Microsoft.EntityFrameworkCore;
@@ -74,6 +75,9 @@ public static class DependencyInjection
         services.AddScoped<Domain.Interfaces.IRolePermissionRepository, RolePermissionRepository>();
         services.AddScoped<Domain.Interfaces.IPermissionAuditLogRepository, PermissionAuditLogRepository>();
         services.AddScoped<Domain.Interfaces.IRefreshTokenRepository, RefreshTokenRepository>();
+        services.AddScoped<Domain.Interfaces.ITenantRepository, TenantRepository>();
+        services.AddScoped<Domain.Interfaces.ITenantConfigurationRepository, TenantConfigurationRepository>();
+        services.AddScoped<Domain.Interfaces.ITenantUsageMetricRepository, TenantUsageMetricRepository>();
 
         // Add domain services
         services.AddScoped<Domain.Services.IPermissionEvaluationService, Domain.Services.PermissionEvaluationService>();
@@ -115,6 +119,9 @@ public static class DependencyInjection
             configuration.GetSection(PermissionCacheOptions.SectionName));
         services.AddScoped<IPermissionCacheService, PermissionCacheService>();
         
+        // Add tenant-aware cache service
+        services.AddScoped<ITenantCacheService, TenantCacheService>();
+        
         // Add resilience services
         services.Configure<ResilienceSettings>(configuration.GetSection(ResilienceSettings.SectionName));
         services.AddSingleton<IResilienceService, ResilienceService>();
@@ -137,6 +144,9 @@ public static class DependencyInjection
 
         // Add messaging services
         services.AddMessaging(configuration);
+
+        // Add multi-tenancy services
+        services.AddMultiTenancy(configuration);
 
         return services;
     }
@@ -264,6 +274,51 @@ public static class DependencyInjection
 
         // Add background service for message consumers
         services.AddHostedService<MessageConsumerService>();
+
+        return services;
+    }
+
+    /// <summary>
+    /// Adds multi-tenancy services to the service collection
+    /// </summary>
+    /// <param name="services">The service collection</param>
+    /// <param name="configuration">The configuration</param>
+    /// <returns>The service collection</returns>
+    public static IServiceCollection AddMultiTenancy(this IServiceCollection services, IConfiguration configuration)
+    {
+        // Add tenant context as scoped service
+        services.AddScoped<ITenantContext, MultiTenancy.TenantContext>();
+
+        // Add tenant service
+        services.AddScoped<ITenantService, MultiTenancy.TenantService>();
+        
+        // Add tenant management services
+        services.AddScoped<ITenantConfigurationService, MultiTenancy.TenantConfigurationService>();
+        services.AddScoped<ITenantFeatureService, MultiTenancy.TenantFeatureService>();
+        services.AddScoped<ITenantUsageService, MultiTenancy.TenantUsageService>();
+
+        // Add tenant resolvers
+        services.AddScoped<MultiTenancy.Resolvers.SubdomainTenantResolver>();
+        services.AddScoped<MultiTenancy.Resolvers.HeaderTenantResolver>();
+        services.AddScoped<MultiTenancy.Resolvers.JwtTenantResolver>();
+
+        // Add composite resolver as the main resolver
+        services.AddScoped<IHttpTenantResolver>(provider =>
+        {
+            var resolvers = new List<IHttpTenantResolver>
+            {
+                provider.GetRequiredService<MultiTenancy.Resolvers.SubdomainTenantResolver>(),
+                provider.GetRequiredService<MultiTenancy.Resolvers.HeaderTenantResolver>(),
+                provider.GetRequiredService<MultiTenancy.Resolvers.JwtTenantResolver>()
+            };
+
+            return new MultiTenancy.Resolvers.CompositeTenantResolver(
+                resolvers,
+                provider.GetRequiredService<ILogger<MultiTenancy.Resolvers.CompositeTenantResolver>>());
+        });
+
+        // Also register as ITenantResolver for cases where only identifier resolution is needed
+        services.AddScoped<ITenantResolver>(provider => provider.GetRequiredService<IHttpTenantResolver>());
 
         return services;
     }

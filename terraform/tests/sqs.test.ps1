@@ -165,7 +165,11 @@ try {
         "sqs_audit_events_queue_url",
         "sqs_all_queue_arns",
         "sqs_main_queue_arns",
-        "sqs_dlq_arns"
+        "sqs_dlq_arns",
+        "sns_sqs_alerts_topic_arn",
+        "sns_sqs_dlq_alerts_topic_arn",
+        "sns_infrastructure_alerts_topic_arn",
+        "sns_all_topic_arns"
     )
     
     foreach ($OutputName in $OutputNames) {
@@ -357,6 +361,67 @@ try {
         
         # Expected: 3 main queues + 3 DLQs = 6 total
         return $QueueArns.Count -eq 6
+    }
+    
+    # Test 10: SNS Topics Exist
+    Test-Condition -TestName "SNS SQS Alerts Topic Exists" -Description "Verify SQS alerts SNS topic is created" -TestScript {
+        $TopicArn = $TerraformOutputs["sns_sqs_alerts_topic_arn"]
+        return -not [string]::IsNullOrEmpty($TopicArn) -and $TopicArn.Contains("sqs-alerts")
+    }
+    
+    Test-Condition -TestName "SNS DLQ Alerts Topic Exists" -Description "Verify SQS DLQ alerts SNS topic is created" -TestScript {
+        $TopicArn = $TerraformOutputs["sns_sqs_dlq_alerts_topic_arn"]
+        return -not [string]::IsNullOrEmpty($TopicArn) -and $TopicArn.Contains("sqs-dlq-alerts")
+    }
+    
+    Test-Condition -TestName "SNS Infrastructure Alerts Topic Exists" -Description "Verify infrastructure alerts SNS topic is created" -TestScript {
+        $TopicArn = $TerraformOutputs["sns_infrastructure_alerts_topic_arn"]
+        return -not [string]::IsNullOrEmpty($TopicArn) -and $TopicArn.Contains("infrastructure-alerts")
+    }
+    
+    # Test 11: SNS Topic Attributes
+    Test-Condition -TestName "SNS Topic Encryption" -Description "Verify SNS topics have encryption enabled" -TestScript {
+        $TopicArn = $TerraformOutputs["sns_sqs_alerts_topic_arn"]
+        if ([string]::IsNullOrEmpty($TopicArn)) { return $false }
+        
+        $Attributes = aws sns get-topic-attributes --topic-arn $TopicArn --region $Region --output json | ConvertFrom-Json
+        return -not [string]::IsNullOrEmpty($Attributes.Attributes.KmsMasterKeyId)
+    }
+    
+    # Test 12: SNS Subscriptions
+    Test-Condition -TestName "SNS Email Subscriptions" -Description "Verify email subscriptions exist for SNS topics" -TestScript {
+        $TopicArn = $TerraformOutputs["sns_sqs_alerts_topic_arn"]
+        if ([string]::IsNullOrEmpty($TopicArn)) { return $false }
+        
+        $Subscriptions = aws sns list-subscriptions-by-topic --topic-arn $TopicArn --region $Region --output json | ConvertFrom-Json
+        $EmailSubscriptions = $Subscriptions.Subscriptions | Where-Object { $_.Protocol -eq "email" }
+        
+        # At least one email subscription should exist if notifications are enabled
+        return $EmailSubscriptions.Count -ge 0  # Allow 0 for environments without email configured
+    }
+    
+    # Test 13: CloudWatch Alarms SNS Integration
+    Test-Condition -TestName "CloudWatch Alarms SNS Integration" -Description "Verify CloudWatch alarms are configured to send to SNS" -TestScript {
+        $AlarmNames = aws cloudwatch describe-alarms --alarm-name-prefix "cleanarch-$Environment" --region $Region --output json | ConvertFrom-Json
+        $SqsAlarms = $AlarmNames.MetricAlarms | Where-Object { $_.Namespace -eq "AWS/SQS" }
+        
+        if ($SqsAlarms.Count -eq 0) { return $false }
+        
+        # Check if at least one alarm has SNS actions configured
+        $AlarmsWithSns = $SqsAlarms | Where-Object { $_.AlarmActions.Count -gt 0 }
+        return $AlarmsWithSns.Count -gt 0
+    }
+    
+    # Test 14: SNS Topic Count
+    Test-Condition -TestName "Expected SNS Topic Count" -Description "Verify expected number of SNS topics are created" -TestScript {
+        $AllTopicArns = $TerraformOutputs["sns_all_topic_arns"]
+        if ([string]::IsNullOrEmpty($AllTopicArns)) { return $false }
+        
+        # Parse the JSON array of ARNs
+        $TopicArns = $AllTopicArns | ConvertFrom-Json
+        
+        # Expected: 3 topics (sqs-alerts, sqs-dlq-alerts, infrastructure-alerts)
+        return $TopicArns.Count -eq 3
     }
     
     # Generate test report

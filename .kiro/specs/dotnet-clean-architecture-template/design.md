@@ -2,10 +2,11 @@
 
 ## Overview
 
-The .NET 8 Clean Architecture Template is designed as a comprehensive, production-ready boilerplate that implements clean architecture principles with enterprise-grade features. The template follows the dependency inversion principle with a clear separation of concerns across multiple layers, ensuring maintainability, testability, and scalability for modular monolith applications.
+The .NET 8 Clean Architecture Template is designed as a comprehensive, production-ready boilerplate that implements clean architecture principles with enterprise-grade features and multi-tenancy support. The template follows the dependency inversion principle with a clear separation of concerns across multiple layers, ensuring maintainability, testability, and scalability for SaaS modular monolith applications.
 
 The architecture emphasizes:
 - **Domain-Driven Design**: Core business logic isolated in the domain layer
+- **Multi-Tenancy**: Complete tenant isolation with shared infrastructure
 - **Dependency Inversion**: Outer layers depend on inner layers through abstractions
 - **Cross-Cutting Concerns**: Centralized handling of logging, caching, security, and resilience
 - **Configuration-Driven**: Environment-specific behavior through configuration
@@ -58,6 +59,38 @@ graph TB
     Interfaces -.-> ExternalServices
 ```
 
+### Multi-Tenancy Architecture
+
+```mermaid
+graph TB
+    subgraph "Tenant Resolution"
+        TenantResolver[Tenant Resolver]
+        TenantContext[Tenant Context]
+        TenantMiddleware[Tenant Middleware]
+    end
+    
+    subgraph "Data Isolation"
+        TenantFilter[Global Query Filter]
+        TenantRepository[Tenant-Aware Repository]
+        TenantDbContext[Tenant DB Context]
+    end
+    
+    subgraph "Tenant Services"
+        TenantService[Tenant Management]
+        TenantConfig[Tenant Configuration]
+        TenantCache[Tenant-Scoped Cache]
+    end
+    
+    Request --> TenantMiddleware
+    TenantMiddleware --> TenantResolver
+    TenantResolver --> TenantContext
+    TenantContext --> TenantFilter
+    TenantFilter --> TenantRepository
+    TenantRepository --> TenantDbContext
+    TenantContext --> TenantCache
+    TenantService --> TenantConfig
+```
+
 ### Project Structure
 
 ```
@@ -77,7 +110,8 @@ src/
 │   ├── Features/
 │   │   ├── Authentication/
 │   │   ├── Users/
-│   │   └── Roles/
+│   │   ├── Roles/
+│   │   └── Tenants/
 │   └── DependencyInjection.cs
 ├── CleanArchTemplate.Domain/              # Domain Layer
 │   ├── Entities/
@@ -90,11 +124,16 @@ src/
 │   │   ├── Contexts/
 │   │   ├── Configurations/
 │   │   ├── Repositories/
+│   │   ├── Interceptors/
 │   │   └── Migrations/
 │   ├── Services/
 │   ├── Messaging/
 │   ├── Caching/
 │   ├── Identity/
+│   ├── MultiTenancy/
+│   │   ├── TenantResolver/
+│   │   ├── TenantContext/
+│   │   └── TenantServices/
 │   └── DependencyInjection.cs
 ├── CleanArchTemplate.Shared/              # Shared Layer
 │   ├── Constants/
@@ -127,27 +166,85 @@ deployment/
 
 ## Components and Interfaces
 
+### Multi-Tenancy Components
+
+**Tenant Resolution**
+```csharp
+public interface ITenantResolver
+{
+    Task<TenantInfo> ResolveTenantAsync(HttpContext context);
+    Task<TenantInfo> ResolveTenantAsync(string identifier);
+}
+
+public interface ITenantContext
+{
+    TenantInfo CurrentTenant { get; }
+    bool IsMultiTenant { get; }
+    void SetTenant(TenantInfo tenant);
+}
+
+public class TenantInfo
+{
+    public Guid Id { get; set; }
+    public string Name { get; set; }
+    public string Identifier { get; set; }
+    public string ConnectionString { get; set; }
+    public Dictionary<string, object> Configuration { get; set; }
+    public bool IsActive { get; set; }
+}
+```
+
+**Tenant Management**
+```csharp
+public interface ITenantService
+{
+    Task<TenantInfo> CreateTenantAsync(CreateTenantRequest request);
+    Task<TenantInfo> GetTenantAsync(Guid tenantId);
+    Task<TenantInfo> GetTenantByIdentifierAsync(string identifier);
+    Task<IEnumerable<TenantInfo>> GetAllTenantsAsync();
+    Task UpdateTenantAsync(Guid tenantId, UpdateTenantRequest request);
+    Task DeactivateTenantAsync(Guid tenantId);
+    Task<bool> TenantExistsAsync(string identifier);
+}
+```
+
+**Tenant-Aware Data Access**
+```csharp
+public interface ITenantRepository<T> : IRepository<T> where T : ITenantEntity
+{
+    Task<IEnumerable<T>> GetByTenantAsync(Guid tenantId);
+    IQueryable<T> QueryByTenant(Guid tenantId);
+}
+
+public interface ITenantEntity
+{
+    Guid TenantId { get; set; }
+}
+```
+
 ### Authentication and Authorization
 
 **JWT Authentication Service**
 ```csharp
 public interface IJwtTokenService
 {
-    Task<TokenResponse> GenerateTokenAsync(User user);
+    Task<TokenResponse> GenerateTokenAsync(User user, TenantInfo tenant);
     Task<TokenResponse> RefreshTokenAsync(string refreshToken);
     Task RevokeTokenAsync(string token);
     ClaimsPrincipal ValidateToken(string token);
+    TenantInfo ExtractTenantFromToken(string token);
 }
 ```
 
-**Role-Based Authorization**
+**Tenant-Aware Role-Based Authorization**
 ```csharp
 public interface IRoleService
 {
-    Task<IEnumerable<Role>> GetUserRolesAsync(Guid userId);
-    Task<bool> HasPermissionAsync(Guid userId, string permission);
-    Task AssignRoleAsync(Guid userId, Guid roleId);
-    Task RemoveRoleAsync(Guid userId, Guid roleId);
+    Task<IEnumerable<Role>> GetUserRolesAsync(Guid userId, Guid tenantId);
+    Task<bool> HasPermissionAsync(Guid userId, string permission, Guid tenantId);
+    Task AssignRoleAsync(Guid userId, Guid roleId, Guid tenantId);
+    Task RemoveRoleAsync(Guid userId, Guid roleId, Guid tenantId);
+    Task<bool> IsUserInTenantAsync(Guid userId, Guid tenantId);
 }
 ```
 
@@ -195,7 +292,7 @@ public interface IUnitOfWork
 
 ### Caching Strategy
 
-**Multi-Environment Caching**
+**Multi-Environment Tenant-Aware Caching**
 ```csharp
 public interface ICacheService
 {
@@ -205,9 +302,19 @@ public interface ICacheService
     Task RemoveByPatternAsync(string pattern);
 }
 
+public interface ITenantCacheService : ICacheService
+{
+    Task<T> GetAsync<T>(string key, Guid tenantId);
+    Task SetAsync<T>(string key, T value, Guid tenantId, TimeSpan? expiration = null);
+    Task RemoveAsync(string key, Guid tenantId);
+    Task RemoveByTenantAsync(Guid tenantId);
+    Task RemoveByPatternAsync(string pattern, Guid tenantId);
+}
+
 // Implementations:
-// - MemoryCacheService (Development)
-// - RedisCacheService (Production)
+// - TenantMemoryCacheService (Development)
+// - TenantRedisCacheService (Production)
+// Key format: "tenant:{tenantId}:{key}"
 ```
 
 ### Messaging System
@@ -250,10 +357,28 @@ public interface ITelemetryService
 
 ### Core Domain Entities
 
+**Tenant Entity**
+```csharp
+public class Tenant : BaseAuditableEntity
+{
+    public string Name { get; set; }
+    public string Identifier { get; set; } // Subdomain or unique identifier
+    public string ConnectionString { get; set; }
+    public string Configuration { get; set; } // JSON configuration
+    public bool IsActive { get; set; }
+    public DateTime? SubscriptionExpiresAt { get; set; }
+    
+    // Navigation properties
+    public ICollection<User> Users { get; set; }
+    public ICollection<Role> Roles { get; set; }
+}
+```
+
 **User Entity**
 ```csharp
-public class User : BaseAuditableEntity
+public class User : BaseAuditableEntity, ITenantEntity
 {
+    public Guid TenantId { get; set; }
     public string Email { get; set; }
     public string FirstName { get; set; }
     public string LastName { get; set; }
@@ -263,6 +388,7 @@ public class User : BaseAuditableEntity
     public bool IsActive { get; set; }
     
     // Navigation properties
+    public Tenant Tenant { get; set; }
     public ICollection<UserRole> UserRoles { get; set; }
     public ICollection<RefreshToken> RefreshTokens { get; set; }
 }
@@ -270,13 +396,15 @@ public class User : BaseAuditableEntity
 
 **Role Entity**
 ```csharp
-public class Role : BaseAuditableEntity
+public class Role : BaseAuditableEntity, ITenantEntity
 {
+    public Guid TenantId { get; set; }
     public string Name { get; set; }
     public string Description { get; set; }
     public bool IsActive { get; set; }
     
     // Navigation properties
+    public Tenant Tenant { get; set; }
     public ICollection<UserRole> UserRoles { get; set; }
     public ICollection<RolePermission> RolePermissions { get; set; }
 }
@@ -296,16 +424,55 @@ public abstract class BaseAuditableEntity : BaseEntity
     public DateTime? UpdatedAt { get; set; }
     public string UpdatedBy { get; set; }
 }
+
+public interface ITenantEntity
+{
+    Guid TenantId { get; set; }
+}
+
+public abstract class BaseTenantEntity : BaseAuditableEntity, ITenantEntity
+{
+    public Guid TenantId { get; set; }
+}
 ```
 
 ### Database Configuration
 
-**PostgreSQL with EF Core**
+**PostgreSQL with EF Core and Multi-Tenancy**
 - Connection pooling with max 100 connections
 - Command timeout: 30 seconds
 - Retry policy: 3 attempts with exponential backoff
 - Migration strategy: Automatic on startup (development), Manual (production)
-- Indexing strategy: Composite indexes on frequently queried columns
+- Indexing strategy: Composite indexes on frequently queried columns including TenantId
+- Global Query Filters: Automatic tenant filtering on all tenant entities
+- Tenant Isolation: Row-level security with TenantId column
+- Soft Delete: Support for tenant-aware soft deletion
+
+**Tenant Data Isolation Strategy**
+```csharp
+// Global Query Filter in DbContext
+protected override void OnModelCreating(ModelBuilder modelBuilder)
+{
+    // Apply tenant filter to all ITenantEntity implementations
+    foreach (var entityType in modelBuilder.Model.GetEntityTypes())
+    {
+        if (typeof(ITenantEntity).IsAssignableFrom(entityType.ClrType))
+        {
+            var parameter = Expression.Parameter(entityType.ClrType, "e");
+            var tenantProperty = Expression.Property(parameter, nameof(ITenantEntity.TenantId));
+            var tenantId = Expression.Property(
+                Expression.Constant(_tenantContext), 
+                nameof(ITenantContext.CurrentTenant), 
+                nameof(TenantInfo.Id));
+            var filter = Expression.Lambda(
+                Expression.Equal(tenantProperty, tenantId), 
+                parameter);
+            
+            modelBuilder.Entity(entityType.ClrType).HasQueryFilter(filter);
+        }
+    }
+}
+```
 
 ## Error Handling
 
@@ -510,4 +677,118 @@ public static class SecretsManagerExtensions
 }
 ```
 
-This design provides a comprehensive foundation for building enterprise-grade .NET 8 applications with clean architecture principles, incorporating all the requested features while maintaining flexibility and extensibility.
+## Multi-Tenancy Implementation Details
+
+### Tenant Resolution Strategies
+
+**1. Subdomain-Based Resolution**
+```csharp
+public class SubdomainTenantResolver : ITenantResolver
+{
+    public async Task<TenantInfo> ResolveTenantAsync(HttpContext context)
+    {
+        var host = context.Request.Host.Host;
+        var subdomain = ExtractSubdomain(host);
+        return await _tenantService.GetTenantByIdentifierAsync(subdomain);
+    }
+    
+    private string ExtractSubdomain(string host)
+    {
+        // Extract subdomain from host (e.g., "tenant1.myapp.com" -> "tenant1")
+        var parts = host.Split('.');
+        return parts.Length > 2 ? parts[0] : null;
+    }
+}
+```
+
+**2. Header-Based Resolution**
+```csharp
+public class HeaderTenantResolver : ITenantResolver
+{
+    public async Task<TenantInfo> ResolveTenantAsync(HttpContext context)
+    {
+        var tenantId = context.Request.Headers["X-Tenant-ID"].FirstOrDefault();
+        if (Guid.TryParse(tenantId, out var id))
+        {
+            return await _tenantService.GetTenantAsync(id);
+        }
+        return null;
+    }
+}
+```
+
+**3. JWT Claims-Based Resolution**
+```csharp
+public class JwtTenantResolver : ITenantResolver
+{
+    public async Task<TenantInfo> ResolveTenantAsync(HttpContext context)
+    {
+        var tenantClaim = context.User.FindFirst("tenant_id")?.Value;
+        if (Guid.TryParse(tenantClaim, out var tenantId))
+        {
+            return await _tenantService.GetTenantAsync(tenantId);
+        }
+        return null;
+    }
+}
+```
+
+### Tenant Middleware Pipeline
+
+```csharp
+public class TenantMiddleware
+{
+    public async Task InvokeAsync(HttpContext context, RequestDelegate next)
+    {
+        var tenant = await _tenantResolver.ResolveTenantAsync(context);
+        
+        if (tenant == null)
+        {
+            context.Response.StatusCode = 404;
+            await context.Response.WriteAsync("Tenant not found");
+            return;
+        }
+        
+        if (!tenant.IsActive)
+        {
+            context.Response.StatusCode = 403;
+            await context.Response.WriteAsync("Tenant is inactive");
+            return;
+        }
+        
+        _tenantContext.SetTenant(tenant);
+        
+        // Add tenant information to logging context
+        using (LogContext.PushProperty("TenantId", tenant.Id))
+        using (LogContext.PushProperty("TenantName", tenant.Name))
+        {
+            await next(context);
+        }
+    }
+}
+```
+
+### Tenant-Aware Services
+
+**Tenant Configuration Service**
+```csharp
+public interface ITenantConfigurationService
+{
+    Task<T> GetConfigurationAsync<T>(string key, T defaultValue = default);
+    Task SetConfigurationAsync<T>(string key, T value);
+    Task<Dictionary<string, object>> GetAllConfigurationAsync();
+}
+```
+
+**Tenant Feature Flags**
+```csharp
+public interface ITenantFeatureService
+{
+    Task<bool> IsFeatureEnabledAsync(string featureName);
+    Task<T> GetFeatureConfigurationAsync<T>(string featureName);
+    Task EnableFeatureAsync(string featureName);
+    Task DisableFeatureAsync(string featureName);
+}
+```
+
+This design provides a comprehensive foundation for building enterprise-grade .NET 8 SaaS applications with clean architecture principles and robust multi-tenancy support, incorporating all the requested features while maintaining flexibility and extensibility.

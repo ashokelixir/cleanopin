@@ -8,11 +8,16 @@ namespace CleanArchTemplate.Domain.Entities;
 /// <summary>
 /// Represents a user in the system
 /// </summary>
-public class User : BaseAuditableEntity
+public class User : BaseAuditableEntity, ITenantEntity
 {
     private readonly List<UserRole> _userRoles = new();
     private readonly List<RefreshToken> _refreshTokens = new();
     private readonly List<UserPermission> _userPermissions = new();
+
+    /// <summary>
+    /// The ID of the tenant this user belongs to
+    /// </summary>
+    public Guid TenantId { get; set; }
 
     /// <summary>
     /// The user's email address

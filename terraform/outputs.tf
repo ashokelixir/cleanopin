@@ -346,6 +346,42 @@ output "sqs_cloudwatch_alarm_arns" {
   value       = module.sqs.cloudwatch_alarm_arns
 }
 
+# SNS Outputs
+output "sns_sqs_alerts_topic_arn" {
+  description = "ARN of the SQS alerts SNS topic"
+  value       = var.enable_sns_notifications ? module.sns.sqs_alerts_topic_arn : null
+}
+
+output "sns_sqs_dlq_alerts_topic_arn" {
+  description = "ARN of the SQS DLQ alerts SNS topic"
+  value       = var.enable_sns_notifications ? module.sns.sqs_dlq_alerts_topic_arn : null
+}
+
+output "sns_infrastructure_alerts_topic_arn" {
+  description = "ARN of the infrastructure alerts SNS topic"
+  value       = var.enable_sns_notifications ? module.sns.infrastructure_alerts_topic_arn : null
+}
+
+output "sns_all_topic_arns" {
+  description = "List of all SNS topic ARNs"
+  value       = var.enable_sns_notifications ? module.sns.all_topic_arns : []
+}
+
+output "sns_topic_arns_by_name" {
+  description = "Map of SNS topic names to ARNs"
+  value       = var.enable_sns_notifications ? module.sns.topic_arns_by_name : {}
+}
+
+output "sns_email_subscriptions" {
+  description = "Information about SNS email subscriptions"
+  value       = var.enable_sns_notifications ? module.sns.email_subscriptions : null
+}
+
+output "sns_sms_subscriptions" {
+  description = "Information about SNS SMS subscriptions"
+  value       = var.enable_sns_notifications ? module.sns.sms_subscriptions : null
+}
+
 # Environment Information
 output "environment" {
   description = "Current environment"

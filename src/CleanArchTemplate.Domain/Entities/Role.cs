@@ -6,10 +6,15 @@ namespace CleanArchTemplate.Domain.Entities;
 /// <summary>
 /// Represents a role in the system
 /// </summary>
-public class Role : BaseAuditableEntity
+public class Role : BaseAuditableEntity, ITenantEntity
 {
     private readonly List<UserRole> _userRoles = new();
     private readonly List<RolePermission> _rolePermissions = new();
+
+    /// <summary>
+    /// The ID of the tenant this role belongs to
+    /// </summary>
+    public Guid TenantId { get; set; }
 
     /// <summary>
     /// The role name
